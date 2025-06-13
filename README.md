@@ -310,7 +310,7 @@ python -m notebooks.vjepa2_demo
 
 ### Probe-based evaluation
 
-Probe-based evaluation consist in training an attentive probe on top of frozen V-JEPA 2 features. We provide training scripts for training your own probes, and checkpoints to run inference directly.
+Probe-based evaluation consists in training an attentive probe on top of frozen V-JEPA 2 features. We provide training scripts for training your own probes, and checkpoints to run inference directly.
 
 #### Training probes
 

@@ -137,7 +137,7 @@ class VisionTransformerPredictorAC(nn.Module):
         """
         :param x: context tokens
         """
-        # Map tokens to pedictor dimensions
+        # Map tokens to predictor dimensions
         x = self.predictor_embed(x)
         B, N_ctxt, D = x.size()
         T = N_ctxt // (self.grid_height * self.grid_width)

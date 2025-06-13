@@ -48,7 +48,7 @@ def cem(
     :param context_frame: [B=1, T=1, HW, D]
     :param goal_frame: [B=1, T=1, HW, D]
     :param world_model: f(context_frame, action) -> next_frame [B, 1, HW, D]
-    :return: [B=1, rollout, 7] an action trjectory over rollout horizon
+    :return: [B=1, rollout, 7] an action trajectory over rollout horizon
 
     Cross-Entropy Method
     -----------------------

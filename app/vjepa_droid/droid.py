@@ -127,7 +127,7 @@ class DROIDVideoDataset(torch.utils.data.Dataset):
                 buffer, actions, states, extrinsics, indices = self.loadvideo_decord(path)
                 loaded_video = True
             except Exception as e:
-                logger.info(f"Ecountered exception when loading video {path=} {e=}")
+                logger.info(f"Encountered exception when loading video {path=} {e=}")
                 loaded_video = False
                 index = np.random.randint(self.__len__())
                 path = self.samples[index]
