@@ -37,8 +37,8 @@ def rotate_queries_or_keys(x, pos):
     emb_sin = freq.sin()  # (..., N, D/2)
     emb_cos = freq.cos()  # (..., N, D/2)
 
-    emb_sin = emb_sin.squeeze(-1).repeat(1, 1, 1, 2)
-    emb_cos = emb_cos.squeeze(-1).repeat(1, 1, 1, 2)
+    emb_sin = emb_sin.repeat_interleave(2, dim=-1)  # (..., N, D)
+    emb_cos = emb_cos.repeat_interleave(2, dim=-1)  # (..., N, D)
 
     # --
     y = x.unflatten(-1, (-1, 2))
