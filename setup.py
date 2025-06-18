@@ -3,6 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import sys
 from setuptools import setup
 
 NAME = "vjepa2"
@@ -18,11 +19,14 @@ def get_requirements():
 
 
 if __name__ == "__main__":
+    requirements = get_requirements()
+    requirements.append("eva-decord") if sys.platform == 'darwin' else requirements.append("decord")
+
     setup(
         name=NAME,
         version=VERSION,
         description=DESCRIPTION,
         url=URL,
-        python_requires=">=3.11",
-        install_requires=get_requirements(),
+        python_requires=">=3.11, <3.12" if sys.platform == 'darwin' else ">=3.11",
+        install_requires=requirements,
     )
