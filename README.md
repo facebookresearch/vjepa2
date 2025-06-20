@@ -11,7 +11,7 @@ Rabbat*, Nicolas Ballas*
 
 *Core Team
 
-[[`Paper`](https://ai.meta.com/research/publications/v-jepa-2-self-supervised-video-models-enable-understanding-prediction-and-planning/)] [[`Blog`](https://ai.meta.com/blog/v-jepa-2-world-model-benchmarks)] [[`BibTex`](#Citation)]
+[[`Paper`](https://arxiv.org/abs/2506.09985)] [[`Blog`](https://ai.meta.com/blog/v-jepa-2-world-model-benchmarks)] [[`BibTex`](#Citation)]
 
 Official Pytorch codebase for V-JEPA 2 and V-JEPA 2-AC.
 
@@ -181,7 +181,7 @@ vjepa2_vit_giant_384 = torch.hub.load('facebookresearch/vjepa2', 'vjepa2_vit_gia
 You can also use our pretrained checkpoints on [Huggingface](https://huggingface.co/collections/facebook/v-jepa-2-6841bad8413014e185b497a6).
 
 ```python
-from transformers import AutoImageProcessor, AutoModel
+from transformers import AutoVideoProcessor, AutoModel
 
 hf_repo = "facebook/vjepa2-vitg-fpc64-256"
 # facebook/vjepa2-vitl-fpc64-256
@@ -278,7 +278,7 @@ import torch
 vjepa2_encoder, vjepa2_ac_predictor = torch.hub.load('facebookresearch/vjepa2', 'vjepa2_ac_vit_giant')
 ```
 
-See [energy_landscape_example.ipynb](notebooks/vjepa_droid/energy_landscape.ipynb) for an example notebook computing the energy landscape of the pretrained action-conditioned backbone using a robot trajectory collected from our lab.
+See [energy_landscape_example.ipynb](notebooks/energy_landscape_example.ipynb) for an example notebook computing the energy landscape of the pretrained action-conditioned backbone using a robot trajectory collected from our lab.
 To run this notebook, you'll need to aditionally install [Jupyter](https://jupyter.org/install) and [Scipy](https://scipy.org/install/) in your conda environment.
 
 ## Getting Started
@@ -318,7 +318,7 @@ python -m notebooks.vjepa2_demo
 
 ### Probe-based evaluation
 
-Probe-based evaluation consist in training an attentive probe on top of frozen V-JEPA 2 features. We provide training scripts for training your own probes, and checkpoints to run inference directly.
+Probe-based evaluation consists in training an attentive probe on top of frozen V-JEPA 2 features. We provide training scripts for training your own probes, and checkpoints to run inference directly.
 
 #### Training probes
 
@@ -440,7 +440,7 @@ are licensed under the Apache 2.0 license.
 ## Citation
 If you find this repository useful in your research, please consider giving a star :star: and a citation
 ```bibtex
-@techreport{assran2025vjepa2,
+@article{assran2025vjepa2,
   title={V-JEPA~2: Self-Supervised Video Models Enable Understanding, Prediction and Planning},
   author={Assran, Mahmoud and Bardes, Adrien and Fan, David and Garrido, Quentin and Howes, Russell and
 Komeili, Mojtaba and Muckley, Matthew and Rizvi, Ammar and Roberts, Claire and Sinha, Koustuv and Zholus, Artem and
@@ -448,7 +448,7 @@ Arnaud, Sergio and Gejji, Abha and Martin, Ada and Robert Hogan, Francois and Du
 Bojanowski, Piotr and Khalidov, Vasil and Labatut, Patrick and Massa, Francisco and Szafraniec, Marc and
 Krishnakumar, Kapil and Li, Yong and Ma, Xiaodong and Chandar, Sarath and Meier, Franziska and LeCun, Yann and
 Rabbat, Michael and Ballas, Nicolas},
-  institution={FAIR at Meta},
+  journal={arXiv preprint arXiv:2506.09985},
   year={2025}
 }
 ```

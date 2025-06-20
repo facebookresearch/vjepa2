@@ -367,7 +367,7 @@ def make_dataloader(
         normalization = DEFAULT_NORMALIZATION
 
     if training:
-        logger.info("implementing auto-agument strategy")
+        logger.info("implementing auto-augment strategy")
         transform = timm_make_transforms(
             input_size=img_size,
             is_training=training,

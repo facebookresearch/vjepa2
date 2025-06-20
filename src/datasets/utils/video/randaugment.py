@@ -494,10 +494,10 @@ def rand_augment_transform(config_str, hparams):
     Create a RandAugment transform
     :param config_str: String defining configuration of random augmentation. Consists of multiple sections separated by
     dashes ('-'). The first section defines the specific variant of rand augment (currently only 'rand'). The remaining
-    sections, not order sepecific determine
+    sections, not order specific determine
         'm' - integer magnitude of rand augment
         'n' - integer num layers (number of transform ops selected per image)
-        'w' - integer probabiliy weight index (index of a set of weights to influence choice of op)
+        'w' - integer probability weight index (index of a set of weights to influence choice of op)
         'mstd' -  float std deviation of magnitude noise applied
         'inc' - integer (bool), use augmentations that increase in severity with magnitude (default: 0)
     Ex 'rand-m9-n3-mstd0.5' results in RandAugment with magnitude 9, num_layers 3, magnitude_std 0.5

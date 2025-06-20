@@ -213,7 +213,7 @@ class _SloppyMultiProcessingDataLoaderIter(_MultiProcessingDataLoaderIter):
                     continue
 
             if idx != self._rcvd_idx:
-                # Tombstone to recieve later
+                # Tombstone to receive later
                 self._task_info[idx] = None
                 if isinstance(data, ExceptionWrapper):
                     data.reraise()

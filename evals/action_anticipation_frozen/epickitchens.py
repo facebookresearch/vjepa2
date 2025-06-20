@@ -55,7 +55,7 @@ def get_dataset_size(shards_list):
 
 
 def log_and_continue(exn):
-    """Call in an exception handler to ignore any exception, isssue a warning, and continue."""
+    """Call in an exception handler to ignore any exception, issue a warning, and continue."""
     logging.warning(f"Handling webdataset error ({repr(exn)}). Ignoring.")
     return True
 
