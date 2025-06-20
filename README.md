@@ -285,10 +285,18 @@ To run this notebook, you'll need to aditionally install [Jupyter](https://jupyt
 
 ### Setup
 
-```
+```bash
 conda create -n vjepa2-312 python=3.12
 conda activate vjepa2-312
 pip install .  # or `pip install -e .` for development mode
+```
+
+### Alternative Setup
+
+If you are a developer working on a mac or linux machine, you can use the following script to setup your environment. It will create a virtual environment with Python 3.11 and install all dependencies. This approach gracefully handles the installation of decord on Apple Silicon, which would otherwise prevent setup with a conda environment on python 3.12.
+
+```bash
+./bin/developer_setup.sh
 ```
 
 ### Usage Demo
