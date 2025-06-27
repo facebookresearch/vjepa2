@@ -69,7 +69,7 @@ V-JEPA 2 is a self-supervised approach to training video encoders, using interne
 
 **(Top)** After post-training with a small amount of robot data, we can deploy the model on a robot arm in new environments, and tackle foundational tasks like reaching, grasping, and pick-and-place by planning from image goals. **(Bottom)** Performance on robot maniuplation tasks using a Franka arm, with input provided through a monocular RGB camera.
 
-<img align="left" src="https://dl.fbaipublicfiles.com/vjepa2/vjepa2-ac-planning.gif" width=65%>&nbsp;
+<img align="left" src="https://github.com/user-attachments/assets/c5d42221-0102-4216-911d-061a4369a805" width=65%>&nbsp;
 <table>
   <tr>
     <th colspan="1"></th>
