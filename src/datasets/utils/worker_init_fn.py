@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This code originally comes from PyTorch Lighting with some light modificaitons:
+# This code originally comes from PyTorch Lighting with some light modifications:
 # https://github.com/Lightning-AI/pytorch-lightning/blob/a944e7744e57a5a2c13f3c73b9735edf2f71e329/src/lightning/fabric/utilities/seed.py
 
 

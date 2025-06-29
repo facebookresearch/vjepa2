@@ -149,7 +149,7 @@ class MemoryEfficientDistributedWeightedSampler(DistributedSampler):
 
             # In order to avoid sampling the same example multiple times between the ranks,
             # we limit each rank to a subset of the total number of samples in the dataset.
-            # For example if our dataet is [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], and we have 2 ranks,
+            # For example if our dataset is [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], and we have 2 ranks,
             # then rank 0 will ONLY sample from [0, 2, 4, 6, 8], and rank 1 from [1, 3, 5, 7, 9].
             # In each iteration we first produce `in_rank_sample` which is the sample index in the rank,
             # based on the size of the subset which that rank can sample from.

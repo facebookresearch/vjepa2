@@ -37,14 +37,14 @@ class TestVideoTransformFunctionalCrop(unittest.TestCase):
     def test_tensor_numpy(self):
         T, C, H, W = 16, 3, 280, 320
         shape = (T, C, H, W)
-        crop_szie = (10, 10, 224, 224)
+        crop_size = (10, 10, 224, 224)
         video_tensor = torch.randint(low=0, high=255, size=shape, dtype=torch.uint8)
         video_numpy = video_tensor.numpy()
 
-        cropped_tensor = functional.crop_clip(video_tensor, *crop_szie)
+        cropped_tensor = functional.crop_clip(video_tensor, *crop_size)
         self.assertIsInstance(cropped_tensor[0], torch.Tensor)
 
-        cropped_np_array = functional.crop_clip(video_numpy, *crop_szie)
+        cropped_np_array = functional.crop_clip(video_numpy, *crop_size)
         self.assertIsInstance(cropped_np_array[0], np.ndarray)
 
         for clip_tensor, clip_np in zip(cropped_tensor, cropped_np_array):
@@ -72,7 +72,7 @@ class TestVideoTransformFunctionalResize(unittest.TestCase):
             clip_tensor = clip_tensor.permute(1, 2, 0)
             diff = torch.mean((torch.abs(clip_tensor - torch.Tensor(clip_np).to(torch.int16))) / (clip_tensor + 1))
 
-            # Transformatinos can not exactly match because of their interpolation functions coming from
+            # Transformations can not exactly match because of their interpolation functions coming from
             # two different sources. Here we check for their relative differences.
             # See the discussion here: https://github.com/fairinternal/jepa-internal/pull/65#issuecomment-2101833959
             self.assertLess(diff, 0.05)

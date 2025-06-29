@@ -97,9 +97,9 @@ def random_short_side_scale_jitter(images, min_size, max_size, boxes=None, inver
 
 def crop_boxes(boxes, x_offset, y_offset):
     """
-    Peform crop on the bounding boxes given the offsets.
+    Perform crop on the bounding boxes given the offsets.
     Args:
-        boxes (ndarray or None): bounding boxes to peform crop. The dimension
+        boxes (ndarray or None): bounding boxes to perform crop. The dimension
             is `num boxes` x 4.
         x_offset (int): cropping offset in the x axis.
         y_offset (int): cropping offset in the y axis.
@@ -150,7 +150,7 @@ def horizontal_flip(prob, images, boxes=None):
     """
     Perform horizontal flip on the given images and corresponding boxes.
     Args:
-        prob (float): probility to flip the images.
+        prob (float): probability to flip the images.
         images (tensor): images to perform horizontal flip, the dimension is
             `num frames` x `channel` x `height` x `width`.
         boxes (ndarray or None): optional. Corresponding boxes to images.
@@ -193,7 +193,7 @@ def uniform_crop(images, size, spatial_idx, boxes=None, scale_size=None):
             crop if height is larger than width.
         boxes (ndarray or None): optional. Corresponding boxes to images.
             Dimension is `num boxes` x 4.
-        scale_size (int): optinal. If not None, resize the images to scale_size before
+        scale_size (int): optimal. If not None, resize the images to scale_size before
             performing any crop.
     Returns:
         cropped (tensor): images with dimension of
@@ -296,7 +296,7 @@ def grayscale(images):
 
 def color_jitter(images, img_brightness=0, img_contrast=0, img_saturation=0):
     """
-    Perfrom a color jittering on the input images. The channels of images
+    Perform a color jittering on the input images. The channels of images
     should be in order BGR.
     Args:
         images (tensor): images to perform color jitter. Dimension is
@@ -331,7 +331,7 @@ def color_jitter(images, img_brightness=0, img_contrast=0, img_saturation=0):
 
 def brightness_jitter(var, images):
     """
-    Perfrom brightness jittering on the input images. The channels of images
+    Perform brightness jittering on the input images. The channels of images
     should be in order BGR.
     Args:
         var (float): jitter ratio for brightness.
@@ -350,7 +350,7 @@ def brightness_jitter(var, images):
 
 def contrast_jitter(var, images):
     """
-    Perfrom contrast jittering on the input images. The channels of images
+    Perform contrast jittering on the input images. The channels of images
     should be in order BGR.
     Args:
         var (float): jitter ratio for contrast.
@@ -370,7 +370,7 @@ def contrast_jitter(var, images):
 
 def saturation_jitter(var, images):
     """
-    Perfrom saturation jittering on the input images. The channels of images
+    Perform saturation jittering on the input images. The channels of images
     should be in order BGR.
     Args:
         var (float): jitter ratio for saturation.
@@ -435,7 +435,7 @@ def lighting_jitter(images, alphastd, eigval, eigvec):
 
 def color_normalization(images, mean, stddev):
     """
-    Perform color nomration on the given images.
+    Perform color normation on the given images.
     Args:
         images (tensor): images to perform color normalization. Dimension is
             `num frames` x `channel` x `height` x `width`.
@@ -443,7 +443,7 @@ def color_normalization(images, mean, stddev):
         stddev (list): standard deviations for normalization.
 
     Returns:
-        out_images (tensor): the noramlized images, the dimension is
+        out_images (tensor): the normalized images, the dimension is
             `num frames` x `channel` x `height` x `width`.
     """
     if len(images.shape) == 3:

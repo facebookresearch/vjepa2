@@ -80,7 +80,7 @@ def init_module(
 
 class ClipAggregation(nn.Module):
     """
-    Process each clip indepdnently and concatenate all tokens
+    Process each clip independently and concatenate all tokens
     """
 
     def __init__(

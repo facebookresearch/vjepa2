@@ -15,7 +15,7 @@ Rabbat*, Nicolas Ballas*
 
 Official Pytorch codebase for V-JEPA 2 and V-JEPA 2-AC.
 
-V-JEPA 2 is a self-supervised approach to training video encoders, using internet-scale video data, that attains state-of-the-art performance on motion understanding and human action anticpation tasks. V-JEPA 2-AC is a latent action-conditioned world model post-trained from V-JEPA 2 (using a small amount of robot trajectory interaction data) that solves robot manipulation tasks without environment-specific data collection or task-specific training or calibration.
+V-JEPA 2 is a self-supervised approach to training video encoders, using internet-scale video data, that attains state-of-the-art performance on motion understanding and human action anticipation tasks. V-JEPA 2-AC is a latent action-conditioned world model post-trained from V-JEPA 2 (using a small amount of robot trajectory interaction data) that solves robot manipulation tasks without environment-specific data collection or task-specific training or calibration.
 
 <p align="center">
 	<img src="assets/flowchart.png" width=100%>
@@ -67,7 +67,7 @@ V-JEPA 2 is a self-supervised approach to training video encoders, using interne
 
 ## V-JEPA 2-AC Post-training
 
-**(Top)** After post-training with a small amount of robot data, we can deploy the model on a robot arm in new environments, and tackle foundational tasks like reaching, grasping, and pick-and-place by planning from image goals. **(Bottom)** Performance on robot maniuplation tasks using a Franka arm, with input provided through a monocular RGB camera.
+**(Top)** After post-training with a small amount of robot data, we can deploy the model on a robot arm in new environments, and tackle foundational tasks like reaching, grasping, and pick-and-place by planning from image goals. **(Bottom)** Performance on robot manipulation tasks using a Franka arm, with input provided through a monocular RGB camera.
 
 <img align="left" src="https://dl.fbaipublicfiles.com/vjepa2/vjepa2-ac-planning.gif" width=65%>&nbsp;
 <table>
@@ -279,7 +279,7 @@ vjepa2_encoder, vjepa2_ac_predictor = torch.hub.load('facebookresearch/vjepa2', 
 ```
 
 See [energy_landscape_example.ipynb](notebooks/vjepa_droid/energy_landscape.ipynb) for an example notebook computing the energy landscape of the pretrained action-conditioned backbone using a robot trajectory collected from our lab.
-To run this notebook, you'll need to aditionally install [Jupyter](https://jupyter.org/install) and [Scipy](https://scipy.org/install/) in your conda environment.
+To run this notebook, you'll need to additionally install [Jupyter](https://jupyter.org/install) and [Scipy](https://scipy.org/install/) in your conda environment.
 
 ## Getting Started
 
@@ -316,7 +316,7 @@ Probe-based evaluation consist in training an attentive probe on top of frozen V
 
 Evaluations can be run either locally, or distributed via SLURM. (Running locally is useful for debugging and validation).
 These sample commands launch Something-Something v2 video classification; other evals are launched by specifying the corresponding config.
-Use provided training configs under "Evaluation Attentive Probes". These configs allow to train multiple probes in parrallel with various optimization parameters.
+Use provided training configs under "Evaluation Attentive Probes". These configs allow to train multiple probes in parallel with various optimization parameters.
 Change filepaths as needed (e.g. `folder`, `checkpoint`, `dataset_train`, `dataset_val`) to match locations of data and downloaded checkpoints on your local filesystem.
 Change \# nodes and local batch size as needed to not exceed available GPU memory.
 

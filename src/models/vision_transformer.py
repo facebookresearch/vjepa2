@@ -218,7 +218,7 @@ class VisionTransformer(nn.Module):
 
         if self.is_video:
 
-            # If pos_embed already corret size, just return
+            # If pos_embed already correct size, just return
             _, _, T, H, W = x.shape
             if H == self.img_height and W == self.img_width and T == self.num_frames:
                 return pos_embed
@@ -254,7 +254,7 @@ class VisionTransformer(nn.Module):
 
         else:
 
-            # If pos_embed already corret size, just return
+            # If pos_embed already correct size, just return
             _, _, H, W = x.shape
             if H == self.img_height and W == self.img_width:
                 return pos_embed
