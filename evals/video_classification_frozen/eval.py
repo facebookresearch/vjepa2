@@ -133,7 +133,7 @@ def main(args_eval, resume_preempt=False):
 
     # -- make csv_logger
     if rank == 0:
-        csv_logger = CSVLogger(log_file, ("%d", "epoch"), ("%.5f", "loss"), ("%.5f", "acc"))
+        csv_logger = CSVLogger(log_file, ("%d", "epoch"), ("%.5f", "train_acc"), ("%.5f", "val_acc"))
 
     # Initialize model
 
