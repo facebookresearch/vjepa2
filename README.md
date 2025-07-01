@@ -31,7 +31,7 @@ V-JEPA 2 is a self-supervised approach to training video encoders, using interne
 
 **(Top)** The encoder and predictor are pre-trained through self-supervised learning from video using a masked latent feature prediction objective, leveraging abundant natural videos to bootstrap physical world understanding and prediction. **(Bottom)** Performance of V-JEPA 2 on downstream understanding and prediction tasks.
 
-<img align="left" src="https://dl.fbaipublicfiles.com/vjepa2/vjepa2-pretrain.gif" width=65%>&nbsp;
+<img align="left" src="https://github.com/user-attachments/assets/914942d8-6a1e-409d-86ff-ff856b7346ab" width=65%>&nbsp;
 <table>
   <tr>
     <th colspan="1">Benchmark</th>
