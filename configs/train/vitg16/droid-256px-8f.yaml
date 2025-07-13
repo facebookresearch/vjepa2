@@ -1,20 +1,20 @@
 app: vjepa_droid
 cpus_per_task: 12
-folder: /your_folder/droid/4.8.vitg16-256px-8f
-mem_per_gpu: 220G
-nodes: 4
-tasks_per_node: 8
+folder: /data/droid/4.8.vitg16-256px-8f
+mem_per_gpu: 20G
+nodes: 1
+tasks_per_node: 1
 data:
-  batch_size: 8
+  batch_size: 4
   camera_views:
   - left_mp4_path
   crop_size: 256
   datasets:
-    - /your_file_path/droid_train_paths_cw.csv
+    - /data/droid/droid_raw/trajectory_dirs.csv
   dataset_fpcs:
   - 8
   fps: 4
-  num_workers: 12
+  num_workers: 8
   patch_size: 16
   pin_mem: true
   stereo_view: false
@@ -40,7 +40,7 @@ meta:
   eval_freq: 100
   resume_checkpoint: null
   load_predictor: false
-  pretrain_checkpoint: /your_vjepa2_checkpoints/vitg.pt
+  pretrain_checkpoint: /data/vjepa_models/vitg.pt
   context_encoder_key: target_encoder
   target_encoder_key: target_encoder
   save_every_freq: 25
