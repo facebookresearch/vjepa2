@@ -91,3 +91,22 @@ class CosineWDSchedule(object):
             if ("WD_exclude" not in group) or not group["WD_exclude"]:
                 group["weight_decay"] = new_wd
         return new_wd
+
+
+class LinearDecaySchedule(object):
+
+    def __init__(self, optimizer, ref_lr, T_max, last_epoch=-1, final_lr=0.0):
+        self.optimizer = optimizer
+        self.ref_lr = ref_lr
+        self.final_lr = final_lr
+        self.T_max = T_max
+        self._step = 0.0
+
+    def step(self):
+        self._step += 1
+        progress = float(self._step) / float(max(1, self.T_max))
+        new_lr = self.ref_lr + progress * (self.final_lr - self.ref_lr)
+        for group in self.optimizer.param_groups:
+            group["lr"] = new_lr
+
+        return new_lr

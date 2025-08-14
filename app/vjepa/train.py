@@ -129,6 +129,11 @@ def main(args, resume_preempt=False):
 
     # -- OPTIMIZATION
     cfgs_opt = args.get("optimization")
+    is_anneal = cfgs_opt.get("is_anneal", False)
+    anneal_ckpt = cfgs_opt.get("anneal_ckpt", None)
+    if is_anneal and anneal_ckpt is None:
+        raise ValueError("Must specify anneal_ckpt if is_anneal is True")
+    resume_anneal = cfgs_opt.get("resume_anneal", False) or (is_anneal and resume_preempt)
     ipe = cfgs_opt.get("ipe", None)
     ipe_scale = cfgs_opt.get("ipe_scale", 1.0)
     wd = float(cfgs_opt.get("weight_decay"))
@@ -169,7 +174,14 @@ def main(args, resume_preempt=False):
     latest_path = os.path.join(folder, latest_file)
     load_path = None
     if load_model:
-        load_path = os.path.join(folder, r_file) if r_file is not None else latest_path
+        if is_anneal:
+            if os.path.exists(latest_path) and resume_anneal:
+                load_path = latest_path
+            else:
+                load_path = anneal_ckpt
+                resume_anneal = False
+        else:
+            load_path = r_file if r_file is not None else latest_path
         if not os.path.exists(load_path):
             load_path = None
             load_model = False
@@ -261,6 +273,7 @@ def main(args, resume_preempt=False):
 
     # -- init optimizer and scheduler
     optimizer, scaler, scheduler, wd_scheduler = init_opt(
+        is_anneal=is_anneal,
         encoder=encoder,
         predictor=predictor,
         wd=wd,
@@ -305,12 +318,14 @@ def main(args, resume_preempt=False):
             target_encoder=target_encoder,
             opt=optimizer,
             scaler=scaler,
+            is_anneal=is_anneal and not resume_anneal,
         )
-        for _ in range(start_epoch * ipe):
-            scheduler.step()
-            wd_scheduler.step()
-            next(momentum_scheduler)
-            mask_collator.step()
+        if not is_anneal or resume_anneal:
+            for _ in range(start_epoch * ipe):
+                scheduler.step()
+                wd_scheduler.step()
+                next(momentum_scheduler)
+                mask_collator.step()
 
     def save_checkpoint(epoch, path):
         if rank != 0:
