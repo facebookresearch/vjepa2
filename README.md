@@ -31,7 +31,7 @@ V-JEPA 2 is a self-supervised approach to training video encoders, using interne
 
 **(Top)** The encoder and predictor are pre-trained through self-supervised learning from video using a masked latent feature prediction objective, leveraging abundant natural videos to bootstrap physical world understanding and prediction. **(Bottom)** Performance of V-JEPA 2 on downstream understanding and prediction tasks.
 
-<img align="left" src="https://dl.fbaipublicfiles.com/vjepa2/vjepa2-pretrain.gif" width=65%>&nbsp;
+<img align="left" src="https://github.com/user-attachments/assets/914942d8-6a1e-409d-86ff-ff856b7346ab" width=65%>&nbsp;
 <table>
   <tr>
     <th colspan="1">Benchmark</th>
@@ -69,7 +69,7 @@ V-JEPA 2 is a self-supervised approach to training video encoders, using interne
 
 **(Top)** After post-training with a small amount of robot data, we can deploy the model on a robot arm in new environments, and tackle foundational tasks like reaching, grasping, and pick-and-place by planning from image goals. **(Bottom)** Performance on robot manipulation tasks using a Franka arm, with input provided through a monocular RGB camera.
 
-<img align="left" src="https://dl.fbaipublicfiles.com/vjepa2/vjepa2-ac-planning.gif" width=65%>&nbsp;
+<img align="left" src="https://github.com/user-attachments/assets/c5d42221-0102-4216-911d-061a4369a805" width=65%>&nbsp;
 <table>
   <tr>
     <th colspan="1"></th>
@@ -278,8 +278,10 @@ import torch
 vjepa2_encoder, vjepa2_ac_predictor = torch.hub.load('facebookresearch/vjepa2', 'vjepa2_ac_vit_giant')
 ```
 
+
 See [energy_landscape_example.ipynb](notebooks/vjepa_droid/energy_landscape.ipynb) for an example notebook computing the energy landscape of the pretrained action-conditioned backbone using a robot trajectory collected from our lab.
 To run this notebook, you'll need to additionally install [Jupyter](https://jupyter.org/install) and [Scipy](https://scipy.org/install/) in your conda environment.
+
 
 ## Getting Started
 
@@ -310,7 +312,7 @@ python -m notebooks.vjepa2_demo
 
 ### Probe-based evaluation
 
-Probe-based evaluation consist in training an attentive probe on top of frozen V-JEPA 2 features. We provide training scripts for training your own probes, and checkpoints to run inference directly.
+Probe-based evaluation consists in training an attentive probe on top of frozen V-JEPA 2 features. We provide training scripts for training your own probes, and checkpoints to run inference directly.
 
 #### Training probes
 

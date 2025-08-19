@@ -251,7 +251,7 @@ def main(args, resume_preempt=False):
     _dlen = len(unsupervised_loader)
     if ipe is None:
         ipe = _dlen
-    logger.info(f"iterations per epoch/dataest length: {ipe}/{_dlen}")
+    logger.info(f"iterations per epoch/dataset length: {ipe}/{_dlen}")
 
     # -- init optimizer and scheduler
     optimizer, scaler, scheduler, wd_scheduler = init_opt(
@@ -427,7 +427,7 @@ def main(args, resume_preempt=False):
                     z_tf = _step_predictor(_z, _a, _s, _e)
 
                     # -- full auto-regressive rollouts of predictor
-                    _z = torch.cat([z[:, :tokens_per_frame], z_tf[:, tokens_per_frame : 2 * tokens_per_frame]], dim=1)
+                    _z = torch.cat([z[:, : tokens_per_frame], z_tf[:, : tokens_per_frame]], dim=1)
                     for n in range(1, auto_steps):
                         _a, _s, _e = actions[:, : n + 1], states[:, : n + 1], extrinsics[:, : n + 1]
                         _z_nxt = _step_predictor(_z, _a, _s, _e)[:, -tokens_per_frame:]

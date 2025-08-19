@@ -13,7 +13,7 @@ import yaml
 import src.models.predictor as vit_pred
 import src.models.vision_transformer as video_vit
 from src.utils.checkpoint_loader import robust_checkpoint_loader
-from src.utils.schedulers import CosineWDSchedule, WarmupCosineSchedule
+from src.utils.schedulers import CosineWDSchedule, LinearDecaySchedule, WarmupCosineSchedule
 from src.utils.wrappers import MultiSeqWrapper, PredictorMultiSeqWrapper
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -94,11 +94,14 @@ def load_checkpoint(
     target_encoder,
     opt,
     scaler,
+    is_anneal=False,
 ):
     logger.info(f"Loading checkpoint from {r_path}")
     checkpoint = robust_checkpoint_loader(r_path, map_location=torch.device("cpu"))
 
-    epoch = checkpoint["epoch"]
+    epoch = 0
+    if not is_anneal:
+        epoch = checkpoint["epoch"]
 
     # -- loading encoder
     pretrained_dict = checkpoint["encoder"]
@@ -205,6 +208,7 @@ def init_video_model(
 
 
 def init_opt(
+    is_anneal,
     encoder,
     predictor,
     iterations_per_epoch,
@@ -237,14 +241,22 @@ def init_opt(
     ]
 
     optimizer = torch.optim.AdamW(param_groups, betas=betas, eps=eps)
-    scheduler = WarmupCosineSchedule(
-        optimizer,
-        warmup_steps=int(warmup * iterations_per_epoch),
-        start_lr=start_lr,
-        ref_lr=ref_lr,
-        final_lr=final_lr,
-        T_max=int(ipe_scale * num_epochs * iterations_per_epoch),
-    )
+    if not is_anneal:
+        scheduler = WarmupCosineSchedule(
+            optimizer,
+            warmup_steps=int(warmup * iterations_per_epoch),
+            start_lr=start_lr,
+            ref_lr=ref_lr,
+            final_lr=final_lr,
+            T_max=int(ipe_scale * num_epochs * iterations_per_epoch),
+        )
+    else:
+        scheduler = LinearDecaySchedule(
+            optimizer,
+            ref_lr=ref_lr,
+            final_lr=final_lr,
+            T_max=int(ipe_scale * num_epochs * iterations_per_epoch),
+        )
     wd_scheduler = CosineWDSchedule(
         optimizer,
         ref_wd=wd,

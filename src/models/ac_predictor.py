@@ -24,9 +24,9 @@ class VisionTransformerPredictorAC(nn.Module):
         num_frames=1,
         tubelet_size=2,
         embed_dim=768,
-        predictor_embed_dim=384,
-        depth=6,
-        num_heads=12,
+        predictor_embed_dim=1024,
+        depth=24,
+        num_heads=16,
         mlp_ratio=4.0,
         qkv_bias=True,
         qk_scale=None,
@@ -35,10 +35,10 @@ class VisionTransformerPredictorAC(nn.Module):
         drop_path_rate=0.0,
         norm_layer=nn.LayerNorm,
         init_std=0.02,
-        uniform_power=False,
+        uniform_power=True,
         use_silu=False,
         wide_silu=True,
-        is_frame_causal=False,
+        is_frame_causal=True,
         use_activation_checkpointing=False,
         use_rope=True,
         action_embed_dim=7,
@@ -137,7 +137,7 @@ class VisionTransformerPredictorAC(nn.Module):
         """
         :param x: context tokens
         """
-        # Map tokens to pedictor dimensions
+        # Map tokens to predictor dimensions
         x = self.predictor_embed(x)
         B, N_ctxt, D = x.size()
         T = N_ctxt // (self.grid_height * self.grid_width)
