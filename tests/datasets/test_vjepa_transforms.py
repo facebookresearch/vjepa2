@@ -19,7 +19,7 @@ class TestNormalize(unittest.TestCase):
         self.g = torch.Generator()
         self.g.manual_seed(42)
 
-    def test_approximation_equivalance(self):
+    def test_approximation_equivalence(self):
         T, H, W, C = 16, 224, 224, 3
         shape = (T, H, W, C)
         mean = torch.tensor([0.485, 0.456, 0.406])

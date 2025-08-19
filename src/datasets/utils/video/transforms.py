@@ -831,7 +831,7 @@ class RandomResize(object):
     Args:
     interpolation (str): Can be one of 'nearest', 'bilinear'
     defaults to nearest
-    size (tuple): (widht, height)
+    size (tuple): (width, height)
     """
 
     def __init__(self, ratio=(3.0 / 4.0, 4.0 / 3.0), interpolation="nearest"):
@@ -860,7 +860,7 @@ class Resize(object):
     Args:
     interpolation (str): Can be one of 'nearest', 'bilinear'
     defaults to nearest
-    size (tuple): (widht, height)
+    size (tuple): (width, height)
     """
 
     def __init__(self, size, interpolation="nearest"):
@@ -1138,7 +1138,7 @@ class Normalize(object):
     will normalize each channel of the input ``torch.*Tensor`` i.e.
     ``input[channel] = (input[channel] - mean[channel]) / std[channel]``
     .. note::
-        This transform acts out of place, i.e., it does not mutates the input tensor.
+        This transform acts out of place, i.e., it does not mutate the input tensor.
     Args:
         mean (sequence): Sequence of means for each channel.
         std (sequence): Sequence of standard deviations for each channel.

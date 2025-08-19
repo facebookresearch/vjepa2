@@ -153,7 +153,7 @@ class MemoryEfficientDistributedWeightedSampler(DistributedSampler):
             # then rank 0 will ONLY sample from [0, 2, 4, 6, 8], and rank 1 from [1, 3, 5, 7, 9].
             # In each iteration we first produce `in_rank_sample` which is the sample index in the rank,
             # based on the size of the subset which that rank can sample from.
-            # Then we computer `sample_idx_in_dataset` for the indx of the sample in the whole dataset.
+            # Then we compute `sample_idx_in_dataset` for the index of the sample in the whole dataset.
             # For the above example if we are sampling for rank 1, we have `self.rng.integers(5)`.
             # Let's assume the result is 2, then `in_rank_sample` is 2 (number "5" in the subset),
             # so the sample index in the whole dataset is
@@ -161,7 +161,7 @@ class MemoryEfficientDistributedWeightedSampler(DistributedSampler):
 
             selected_dataset_size = self.dataset_sizes[selected_dataset_idx]
             # 1) Getting sample index in the rank.
-            # NOTE: this may effectively drops the last batch,
+            # NOTE: this may effectively drop the last batch,
             # but given the sample sizes that we use this sampler with, it should not be an issue.
             num_samples_in_rank = selected_dataset_size // self.num_replicas
             in_rank_sample = self.rng.integers(num_samples_in_rank)
@@ -260,7 +260,7 @@ class MemoryEfficientDistributedWeightedSamplerLessRepeat(DistributedSampler):
             self.individual_dataset_sampler = []
             for ids, ds in enumerate(self.dataset_sizes):
 
-                # NOTE: this may effectively drops the last batch,
+                # NOTE: this may effectively drop the last batch,
                 # but given the sample sizes that we use this sampler with, it should not be an issue.
                 num_samples_in_rank = ds // self.num_replicas
                 self.individual_dataset_sampler.append(self._new_sampler(num_samples_in_rank))
