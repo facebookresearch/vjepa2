@@ -38,7 +38,8 @@ def rotate_queries_or_keys(x, pos):
     emb_cos = freq.cos()  # (..., N, D/2)
     # -- NOTE: This expansion has a subtle bug where frequencies are duplicated across the vector pair.
     # -- Fixing the bug would break compatibility with the pretrained model, but the fix can be applied by commenting
-    # -- out the two lines below, and uncommenting the following two lines. (Thanks to @echosprint)
+    # -- out the two lines below, and uncommenting the following two lines.
+    # -- Thanks to @echosprint, original PR: https://github.com/facebookresearch/vjepa2/pull/15
     emb_sin = emb_sin.squeeze(-1).repeat(1, 1, 1, 2)
     emb_cos = emb_cos.squeeze(-1).repeat(1, 1, 1, 2)
     # emb_sin = emb_sin.repeat_interleave(2, dim=-1)  # (..., N, D)
