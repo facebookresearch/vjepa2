@@ -39,7 +39,7 @@ parser.add_argument("--exclude", type=str, help="nodes to exclude from training"
 parser.add_argument(
     "--batch-launch",
     action="store_true",
-    help="whether fname points to a file to batch-lauch several config files",
+    help="whether fname points to a file to batch-launch several config files",
 )
 parser.add_argument(
     "--fname",

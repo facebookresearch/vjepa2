@@ -178,7 +178,7 @@ class VisionTransformerPredictor(nn.Module):
         # Batch Size
         B = len(x) // len(masks_x)
 
-        # Map context tokens to pedictor dimensions
+        # Map context tokens to predictor dimensions
         x = self.predictor_embed(x)
         if has_cls:
             x_cls = x[:, :1, :]
