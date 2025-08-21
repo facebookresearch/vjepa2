@@ -293,7 +293,7 @@ conda activate vjepa2-312
 pip install .  # or `pip install -e .` for development mode
 ```
 
-**Note to macOS users:** V-JEPA 2 relies on [`decord`](https://github.com/dmlc/decord), which does not support macOS (and, unfortunately, is also no longer under development). In order to run the V-JEPA 2 code on macOS, you will need a different `decord` implementation. We do not make specific recommendations, although some users have reported the use of [`eva-decord`](https://github.com/georgia-tech-db/eva-decord) or [`decord2`](https://github.com/johnnynunez/decord2). We leave the selection of the `decord` package up to the user's discretion.
+**Note to macOS users:** V-JEPA 2 relies on [`decord`](https://github.com/dmlc/decord), which does not support macOS (and, unfortunately, is also no longer under development). In order to run the V-JEPA 2 code on macOS, you will need a different `decord` implementation. We do not make specific recommendations, although some users have reported the use of [`eva-decord`](https://github.com/georgia-tech-db/eva-decord) (see [PR 1](https://github.com/facebookresearch/vjepa2/pull/1)) or [`decord2`](https://github.com/johnnynunez/decord2) (see [PR 31](https://github.com/facebookresearch/vjepa2/pull/31)).  We leave the selection of the `decord` package up to the user's discretion.
 
 ### Usage Demo
 
