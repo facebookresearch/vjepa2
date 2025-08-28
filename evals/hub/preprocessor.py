@@ -4,12 +4,12 @@
 # LICENSE file in the root directory of this source tree.
 
 
-def _make_transforms(crop_size=256):
+def _make_transforms(crop_size=256, preserve_border=False):
     from ..video_classification_frozen.utils import make_transforms
 
-    return make_transforms(crop_size=crop_size, training=False)
+    return make_transforms(crop_size=crop_size, training=False, preserve_border=preserve_border)
 
 
-def vjepa2_preprocessor(*, pretrained: bool = True, **kwargs):
+def vjepa2_preprocessor(*, pretrained: bool = True, preserve_border: bool = False, **kwargs):
     crop_size = kwargs.get("crop_size", 256)
-    return _make_transforms(crop_size=crop_size)
+    return _make_transforms(crop_size=crop_size, preserve_border=preserve_border)
