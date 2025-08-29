@@ -104,7 +104,11 @@ if __name__ == "__main__":
             )
         # Single-GPU debugging
         else:
-            process_main(args=args, rank=0, fname=args.fname, world_size=1, devices=["cuda:0"])
+            if torch.backends.mps.is_available():
+                device = "mps"
+            else:
+                device = "cuda:0"
+            process_main(args=args, rank=0, fname=args.fname, world_size=1, devices=[device])
     else:
         num_gpus = len(args.devices)
         mp.set_start_method("spawn")
