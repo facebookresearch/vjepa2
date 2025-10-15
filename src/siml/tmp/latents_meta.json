@@ -1,0 +1,15 @@
+{
+  "backend": "hub",
+  "hub_key": "vjepa2_vit_large",
+  "hf_repo": "facebook/vjepa2-vitl-fpc64-256",
+  "z_k_shape": [
+    1,
+    1024,
+    1024
+  ],
+  "z_g_shape": [
+    1,
+    1024,
+    1024
+  ]
+}

@@ -1,0 +1,40 @@
+action_dim: 7
+action_l1_ball: 0.075
+binary_mode: fepgate
+cem:
+  iters: 5
+  samples: 128
+episodes: 100
+gate_hard: true
+goal_tolerance_m: 0.04
+horizon: 1
+io:
+  out_dir: siml/results/reaching
+lambda_penalty: 0.0
+latents:
+  z_g_path: siml/tmp/z_g.npy
+  z_k_path: siml/tmp/z_k.npy
+mpc_entry: siml.evals.scaffold:run_mpc
+predictor_entry: siml.evals.scaffold:make_predictor
+s_k:
+  cube:
+  - 0.05
+  - -0.1
+  - 0.05
+  ee:
+  - 0.0
+  - 0.0
+  - 0.05
+  grip: 0
+  pad:
+  - 0.0
+  - -0.1
+  - 0.05
+siml:
+  agent_memory: siml/memory/vjepa2_ac.mem
+  autosave_every: 500
+  backend: cli
+  memory_mode: online
+  runtime_bin: siml/bin/siml_runtime
+surprise_entry: siml.surprise.cli_bridge:siml_online_step
+tau: 0.0007971996674314141

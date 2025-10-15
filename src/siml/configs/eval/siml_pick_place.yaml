@@ -1,0 +1,22 @@
+binary_mode: "grip"
+gate_hard: false
+lambda_penalty: 0.0      # not used in 'grip' mode
+agent_memory: "./agent_memory.bin"
+tau: 0.000796750420704484
+horizon: 2
+cem:
+  samples: 128
+  iters: 5
+action_l1_ball: 0.075
+
+episodes: 200
+objects: ["box", "cup"]
+
+metrics:
+  phases: ["grasp", "reach_with_obj", "place"]
+  failure_taxonomy: ["missed_rim", "drop", "off_path"]
+
+io:
+  out_dir: "siml/results/pick_place"
+  save_mp4: true
+  save_csv: true

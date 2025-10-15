@@ -1,0 +1,39 @@
+# Reproduce Fig.9-style (Δx, Δy) sweep with Δz = 0
+binary_mode: "fepgate"      # off|grip|fepgate
+agent_memory: "./agent_memory.bin"
+predictor_entry: "siml.evals.scaffold:make_predictor"
+planner_entry:   "siml.evals.scaffold:run_mpc"
+surprise_entry: "siml.surprise.pickplace_surprise:fep_surprise_pickplace"
+tau: 0.000796750420704484
+lambda_penalty: 0.5
+gate_hard: false
+
+# JEPA planner parity
+horizon: 1
+cem:
+  samples: 128
+  iters: 5
+action_l1_ball: 0.075
+
+# Sweep box & resolution
+sweep:
+  dx_min: -0.15
+  dx_max:  0.15
+  dy_min: -0.15
+  dy_max:  0.15
+  steps:   61
+
+camera_jitter_deg: 0.0
+camera_scale_jitter: 0.0
+
+io:
+  out_dir: "siml/results/landscape"
+  save_csv: true
+  save_png: true
+
+s_k:
+  ee:   [0.00,  0.00, 0.05]
+  cube: [0.05, -0.10, 0.05]   # a bit to the right and down
+  pad:  [0.00, -0.10, 0.05]   # same as cube → “already on pad if gripped”
+  grip: 0
+
