@@ -158,6 +158,12 @@ def init_video_model(
     use_pred_silu=False,
     wide_silu=False,
     use_activation_checkpointing=False,
+    # -- ST-A² params
+    use_area_attention=False,
+    area_attention_layers=None,
+    area_spatial_splits=2,
+    area_temporal_splits=2,
+    area_residual_scale=1.0,
 ):
     encoder = video_vit.__dict__[model_name](
         img_size=crop_size,
@@ -170,6 +176,11 @@ def init_video_model(
         wide_silu=wide_silu,
         use_activation_checkpointing=use_activation_checkpointing,
         use_rope=use_rope,
+        use_area_attention=use_area_attention,
+        area_attention_layers=area_attention_layers,
+        area_spatial_splits=area_spatial_splits,
+        area_temporal_splits=area_temporal_splits,
+        area_residual_scale=area_residual_scale,
     )
     encoder = MultiSeqWrapper(encoder)
     predictor = vit_pred.__dict__["vit_predictor"](

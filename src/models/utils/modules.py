@@ -387,6 +387,259 @@ class RoPEAttention(nn.Module):
         return x
 
 
+class RoPEAreaAttention(nn.Module):
+    """
+    Spatiotemporal Area Attention (ST-A²) with 3D-RoPE.
+
+    Extends RoPEAttention by partitioning the sparse visible token set into
+    spatiotemporal areas based on each token's (t, h, w) grid position.
+    Attention is computed independently within each area, reducing cost from
+    O(N²) to O(num_areas × (N/num_areas)²).
+
+    Compatible with V-JEPA 2's sparse masking: tokens are assigned to areas
+    by their original grid position (preserved in the mask indices), then
+    gathered, padded to equal length, processed in a single batched SDPA call,
+    and scattered back to original order.
+
+    Shares identical weights with RoPEAttention (same qkv, proj, RoPE dims)
+    so pretrained checkpoints can be loaded directly.
+    """
+
+    def __init__(
+        self,
+        dim,
+        num_heads=8,
+        qkv_bias=False,
+        qk_scale=None,
+        attn_drop=0.0,
+        proj_drop=0.0,
+        use_sdpa=True,
+        grid_size=14,
+        is_causal=False,
+        spatial_splits=2,
+        temporal_splits=2,
+        residual_scale=1.0,
+    ):
+        super().__init__()
+        self.num_heads = num_heads
+        self.head_dim = head_dim = dim // num_heads
+        self.scale = qk_scale or head_dim**-0.5
+        self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
+        self.attn_drop = nn.Dropout(attn_drop)
+        self.proj = nn.Linear(dim, dim)
+        self.proj_drop_prob = proj_drop
+        self.proj_drop = nn.Dropout(proj_drop)
+        self.use_sdpa = use_sdpa
+        # -- RoPE dimensions (identical to RoPEAttention for weight compat)
+        self.d_dim = int(2 * ((head_dim // 3) // 2))
+        self.h_dim = int(2 * ((head_dim // 3) // 2))
+        self.w_dim = int(2 * ((head_dim // 3) // 2))
+        self.grid_size = grid_size
+        self.is_causal = is_causal
+        # -- Area attention params
+        self.spatial_splits = spatial_splits
+        self.temporal_splits = temporal_splits
+        self.num_areas = spatial_splits * temporal_splits
+        self.residual_scale = residual_scale
+
+    def _get_frame_pos(self, ids, H_patches=None, W_patches=None):
+        if H_patches is None or W_patches is None:
+            tokens_per_frame = int(self.grid_size * self.grid_size)
+        else:
+            tokens_per_frame = int(H_patches * W_patches)
+        return ids // tokens_per_frame
+
+    def _get_height_pos(self, ids, H_patches=None, W_patches=None):
+        if H_patches is None or W_patches is None:
+            tokens_per_frame = int(self.grid_size * self.grid_size)
+            tokens_per_row = self.grid_size
+        else:
+            tokens_per_frame = int(H_patches * W_patches)
+            tokens_per_row = W_patches
+        frame_ids = self._get_frame_pos(ids, H_patches, W_patches)
+        ids = ids - tokens_per_frame * frame_ids
+        return ids // tokens_per_row
+
+    def separate_positions(self, ids, H_patches=None, W_patches=None):
+        if H_patches is None or W_patches is None:
+            tokens_per_frame = int(self.grid_size * self.grid_size)
+            tokens_per_row = self.grid_size
+        else:
+            tokens_per_frame = int(H_patches * W_patches)
+            tokens_per_row = W_patches
+        frame_ids = self._get_frame_pos(ids, H_patches, W_patches)
+        height_ids = self._get_height_pos(ids, H_patches, W_patches)
+        width_ids = (ids - tokens_per_frame * frame_ids) - tokens_per_row * height_ids
+        return frame_ids, height_ids, width_ids
+
+    def _compute_area_ids(self, flat_mask, T, H_patches, W_patches):
+        """
+        Assign each token to a spatiotemporal area based on its grid position.
+
+        flat_mask: [B, N] integer indices of visible tokens in the full grid
+        Returns: [B, N] integer area IDs in [0, num_areas)
+        """
+        tokens_per_frame = int(H_patches * W_patches)
+        tokens_per_row = int(W_patches)
+
+        frame_ids = flat_mask // tokens_per_frame
+        remainder = flat_mask - tokens_per_frame * frame_ids
+        height_ids = remainder // tokens_per_row
+
+        # Compute temporal and spatial area boundaries
+        T_eff = T if T is not None else int(flat_mask.max().item() // tokens_per_frame + 1)
+        t_area_size = max(1, T_eff // self.temporal_splits)
+        h_area_size = max(1, H_patches // self.spatial_splits)
+
+        area_t = torch.clamp(frame_ids // t_area_size, max=self.temporal_splits - 1)
+        area_h = torch.clamp(height_ids // h_area_size, max=self.spatial_splits - 1)
+
+        return (area_t * self.spatial_splits + area_h).long()
+
+    def forward(self, x, mask=None, attn_mask=None, T=None, H_patches=None, W_patches=None):
+        B, N, C = x.size()
+        grid_depth = int(N // (self.grid_size * self.grid_size))
+
+        # -- Compute QKV
+        qkv = self.qkv(x).unflatten(-1, (3, self.num_heads, -1)).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2]  # [B, num_heads, N, D]
+
+        # -- Compute positions and apply 3D-RoPE (identical to RoPEAttention)
+        if mask is not None:
+            pos_mask = mask.unsqueeze(1).repeat(1, self.num_heads, 1)
+            d_mask, h_mask, w_mask = self.separate_positions(pos_mask, H_patches, W_patches)
+        else:
+            if T is None or H_patches is None or W_patches is None:
+                pos_ids = torch.arange(int(grid_depth * self.grid_size * self.grid_size), device=x.device)
+            else:
+                pos_ids = torch.arange(int(T * H_patches * W_patches), device=x.device)
+            d_mask, h_mask, w_mask = self.separate_positions(pos_ids, H_patches, W_patches)
+
+        s = 0
+        qd = rotate_queries_or_keys(q[..., s : s + self.d_dim], pos=d_mask)
+        kd = rotate_queries_or_keys(k[..., s : s + self.d_dim], pos=d_mask)
+        s += self.d_dim
+        qh = rotate_queries_or_keys(q[..., s : s + self.h_dim], pos=h_mask)
+        kh = rotate_queries_or_keys(k[..., s : s + self.h_dim], pos=h_mask)
+        s += self.h_dim
+        qw = rotate_queries_or_keys(q[..., s : s + self.w_dim], pos=w_mask)
+        kw = rotate_queries_or_keys(k[..., s : s + self.w_dim], pos=w_mask)
+        s += self.w_dim
+
+        if s < self.head_dim:
+            qr = q[..., s:]
+            kr = k[..., s:]
+            q = torch.cat([qd, qh, qw, qr], dim=-1)
+            k = torch.cat([kd, kh, kw, kr], dim=-1)
+        else:
+            q = torch.cat([qd, qh, qw], dim=-1)
+            k = torch.cat([kd, kh, kw], dim=-1)
+
+        # -- Compute area assignments for each token
+        if mask is not None:
+            area_ids = self._compute_area_ids(mask, T, H_patches, W_patches)
+        else:
+            H_p = H_patches if H_patches is not None else self.grid_size
+            W_p = W_patches if W_patches is not None else self.grid_size
+            T_eff = T if T is not None else grid_depth
+            full_ids = torch.arange(int(T_eff * H_p * W_p), device=x.device).unsqueeze(0).expand(B, -1)
+            area_ids = self._compute_area_ids(full_ids, T_eff, H_p, W_p)
+
+        # -- Differentiable area attention via gather-pad-attend-scatter.
+        # Build per-area gather indices with padding, run attention per area,
+        # then scatter results back. All operations use torch.gather which is
+        # autograd-friendly.
+        D = self.head_dim
+
+        # Compute area counts and max tokens per area
+        area_counts = torch.zeros(B, self.num_areas, dtype=torch.long, device=x.device)
+        for a in range(self.num_areas):
+            area_counts[:, a] = (area_ids == a).sum(dim=1)
+        max_per_area = area_counts.max(dim=0).values  # [num_areas]
+
+        # Build padded gather indices for each area: [B, max_n_a]
+        # Padded positions point to index 0 (safe to gather, masked out in attn)
+        area_gather_indices = []
+        area_scatter_masks = []  # bool: True for real tokens, False for padding
+        for a in range(self.num_areas):
+            max_n = max_per_area[a].item()
+            if max_n == 0:
+                area_gather_indices.append(None)
+                area_scatter_masks.append(None)
+                continue
+            gather_idx = torch.zeros(B, max_n, dtype=torch.long, device=x.device)
+            valid_mask = torch.zeros(B, max_n, dtype=torch.bool, device=x.device)
+            for b in range(B):
+                idx = torch.where(area_ids[b] == a)[0]
+                n_b = idx.size(0)
+                gather_idx[b, :n_b] = idx
+                valid_mask[b, :n_b] = True
+            area_gather_indices.append(gather_idx)
+            area_scatter_masks.append(valid_mask)
+
+        # Process each area
+        out_parts = []  # list of (output, gather_idx, valid_mask, max_n) tuples
+        for a in range(self.num_areas):
+            max_n = max_per_area[a].item()
+            if max_n == 0:
+                continue
+            gather_idx = area_gather_indices[a]
+            valid_mask = area_scatter_masks[a]
+
+            # Expand indices for gathering from [B, num_heads, N, D]
+            # gather_idx: [B, max_n] → [B, num_heads, max_n, D]
+            idx_exp = gather_idx.unsqueeze(1).unsqueeze(-1).expand(B, self.num_heads, max_n, D)
+            q_area = q.gather(2, idx_exp)  # [B, num_heads, max_n, D]
+            k_area = k.gather(2, idx_exp)
+            v_area = v.gather(2, idx_exp)
+
+            # Build attention mask to block padded KEY positions.
+            # Only mask columns (keys), not rows (queries), to avoid all-inf rows
+            # that cause nan in softmax. Padded query outputs are discarded during
+            # scatter (only real token positions are written back).
+            min_n = area_counts[:, a].min().item()
+            pad_mask = None
+            if min_n != max_n:
+                # valid_mask: [B, max_n] → key mask: [B, 1, 1, max_n]
+                vm_key = valid_mask.unsqueeze(1).unsqueeze(2)  # [B, 1, 1, max_n]
+                pad_mask = torch.where(
+                    vm_key,
+                    torch.zeros(1, dtype=q.dtype, device=q.device),
+                    torch.tensor(float("-inf"), dtype=q.dtype, device=q.device),
+                )
+
+            # Run attention for this area
+            if self.use_sdpa:
+                with torch.backends.cuda.sdp_kernel():
+                    out_area = F.scaled_dot_product_attention(
+                        q_area, k_area, v_area,
+                        dropout_p=self.proj_drop_prob if self.training else 0.0,
+                        attn_mask=pad_mask,
+                    )
+            else:
+                attn_scores = (q_area @ k_area.transpose(-2, -1)) * self.scale
+                if pad_mask is not None:
+                    attn_scores = attn_scores + pad_mask
+                attn_scores = attn_scores.softmax(dim=-1)
+                attn_scores = self.attn_drop(attn_scores)
+                out_area = attn_scores @ v_area
+
+            out_parts.append((out_area, idx_exp))
+
+        # Scatter results back to original positions using differentiable scatter_
+        # We accumulate into a zero tensor; each position is written exactly once.
+        x_out = torch.zeros_like(q)  # [B, num_heads, N, D]
+        for out_area, idx_exp in out_parts:
+            x_out = x_out.scatter(2, idx_exp, out_area)
+
+        x = x_out.transpose(1, 2).reshape(B, N, C)
+        if self.residual_scale != 1.0:
+            x = x * self.residual_scale
+        x = self.proj(x)
+        x = self.proj_drop(x)
+        return x
+
+
 class Attention(nn.Module):
     def __init__(
         self,
@@ -520,11 +773,30 @@ class Block(nn.Module):
         is_causal=False,
         grid_size=16,
         use_rope=False,
+        use_area_attention=False,
+        area_spatial_splits=2,
+        area_temporal_splits=2,
+        area_residual_scale=1.0,
         **kwargs,
     ):
         super().__init__()
         self.norm1 = norm_layer(dim)
-        if use_rope:
+        if use_rope and use_area_attention:
+            self.attn = RoPEAreaAttention(
+                dim,
+                num_heads=num_heads,
+                qkv_bias=qkv_bias,
+                qk_scale=qk_scale,
+                attn_drop=attn_drop,
+                use_sdpa=use_sdpa,
+                is_causal=is_causal,
+                grid_size=grid_size,
+                proj_drop=drop,
+                spatial_splits=area_spatial_splits,
+                temporal_splits=area_temporal_splits,
+                residual_scale=area_residual_scale,
+            )
+        elif use_rope:
             self.attn = RoPEAttention(
                 dim,
                 num_heads=num_heads,
@@ -559,7 +831,7 @@ class Block(nn.Module):
             self.mlp = MLP(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
     def forward(self, x, mask=None, attn_mask=None, T=None, H_patches=None, W_patches=None):
-        if isinstance(self.attn, RoPEAttention):
+        if isinstance(self.attn, (RoPEAttention, RoPEAreaAttention)):
             y = self.attn(self.norm1(x), mask=mask, attn_mask=attn_mask, T=T, H_patches=H_patches, W_patches=W_patches)
         else:
             y = self.attn(self.norm1(x), mask=mask, attn_mask=attn_mask)

@@ -1,0 +1,116 @@
+# ST-A² (Spatiotemporal Area Attention) ablation config for ViT-L
+# Based on pretrain-256px-16f.yaml with area attention enabled.
+#
+# Area attention is applied to the first 18 of 24 encoder layers (75%).
+# The last 6 layers use full attention for global reasoning (masked prediction).
+# Factored split: spatial_splits=2, temporal_splits=2 → 4 areas.
+#
+# For Phase 1 ablation, use a smaller dataset subset and fewer epochs.
+# Adjust nodes/tasks_per_node for your hardware (e.g., 1 node, 8 GPUs).
+
+app: vjepa
+nodes: 1
+tasks_per_node: 8
+cpus_per_task: 16
+mem_per_gpu: 80G
+folder: /your_folder/pretrain/area_attn_ablation/vitl.256px.16f
+data:
+  dataset_type: VideoDataset
+  datasets:
+  - /your_k710_root_dir/k710_train_paths.csv
+  - /your_data_path/ssv2_train_paths.csv
+  - /your_data/howto_320p.csv
+  datasets_weights:
+  - 0.335
+  - 0.100
+  - 0.565
+  batch_size: 24
+  crop_size: 256
+  patch_size: 16
+  dataset_fpcs:
+  - 16
+  - 16
+  - 16
+  tubelet_size: 2
+  fps: 4
+  num_workers: 8
+  persistent_workers: true
+  pin_mem: true
+data_aug:
+  auto_augment: false
+  motion_shift: false
+  random_resize_aspect_ratio:
+  - 0.75
+  - 1.35
+  random_resize_scale:
+  - 0.3
+  - 1.0
+  reprob: 0.0
+loss:
+  loss_exp: 1.0
+mask:
+- aspect_ratio:
+  - 0.75
+  - 1.5
+  full_complement: false
+  max_keep: null
+  max_temporal_keep: 1.0
+  num_blocks: 8
+  spatial_scale:
+  - 0.15
+  - 0.15
+  temporal_scale:
+  - 1.0
+  - 1.0
+- aspect_ratio:
+  - 0.75
+  - 1.5
+  full_complement: false
+  max_keep: null
+  max_temporal_keep: 1.0
+  num_blocks: 2
+  spatial_scale:
+  - 0.7
+  - 0.7
+  temporal_scale:
+  - 1.0
+  - 1.0
+meta:
+  dtype: bfloat16
+  eval_freq: 100
+  load_checkpoint: true
+  read_checkpoint: null
+  save_every_freq: 50
+  seed: 239
+  use_sdpa: true
+model:
+  model_name: vit_large
+  pred_depth: 12
+  pred_embed_dim: 384
+  pred_num_heads: 12
+  uniform_power: true
+  use_activation_checkpointing: true
+  use_mask_tokens: true
+  use_rope: true
+  zero_init_mask_tokens: true
+  # -- ST-A² configuration
+  use_area_attention: true
+  area_attention_layers:
+  - 0
+  - 18
+  area_spatial_splits: 2
+  area_temporal_splits: 2
+  area_residual_scale: 1.0
+optimization:
+  ema:
+  - 0.99925
+  - 0.99925
+  epochs: 10
+  final_lr: 0.000525
+  final_weight_decay: 0.04
+  ipe: 300
+  ipe_scale: 1.25
+  lr: 0.000525
+  start_lr: 0.0001
+  warmup: 40
+  weight_decay: 0.04
