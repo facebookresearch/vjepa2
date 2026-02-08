@@ -1,0 +1,182 @@
+# ST-A² (Spatiotemporal Area Attention) eval config for Kinetics-400
+# Based on k400.yaml with area attention enabled in the encoder.
+#
+# The encoder checkpoint must have been trained with matching area attention
+# settings (use_area_attention=true, layers 0-17, 2x2 splits).
+#
+# Usage:
+#   python -m evals.main --fname configs/eval/vitl/k400-area-attn.yaml \
+#     --devices cuda:0 cuda:1 cuda:2 cuda:3 cuda:4 cuda:5 cuda:6 cuda:7
+
+cpus_per_task: 16
+eval_name: video_classification_frozen
+folder: /your_folder/evals/vitl/k400-area-attn
+mem_per_gpu: 220G
+nodes: 8
+num_workers: 8
+resume_checkpoint: true
+tag: k400-vitl16-16x8x3-16f-area-attn
+tasks_per_node: 8
+experiment:
+  classifier:
+    num_heads: 16
+    num_probe_blocks: 4
+  data:
+    dataset_type: VideoDataset
+    dataset_train: /your_data_path/k400_train_paths.csv
+    dataset_val: /your_data_path/k400_val_paths.csv
+    frame_step: 4
+    frames_per_clip: 16
+    num_classes: 400
+    num_segments: 8
+    num_views_per_segment: 3
+    resolution: 256
+  optimization:
+    batch_size: 4
+    multihead_kwargs:
+    - final_lr: 0.0
+      final_weight_decay: 0.01
+      lr: 0.005
+      start_lr: 0.005
+      warmup: 0.0
+      weight_decay: 0.01
+    - final_lr: 0.0
+      final_weight_decay: 0.01
+      lr: 0.003
+      start_lr: 0.003
+      warmup: 0.0
+      weight_decay: 0.01
+    - final_lr: 0.0
+      final_weight_decay: 0.01
+      lr: 0.001
+      start_lr: 0.001
+      warmup: 0.0
+      weight_decay: 0.01
+    - final_lr: 0.0
+      final_weight_decay: 0.01
+      lr: 0.0003
+      start_lr: 0.0003
+      warmup: 0.0
+      weight_decay: 0.01
+    - final_lr: 0.0
+      final_weight_decay: 0.01
+      lr: 0.0001
+      start_lr: 0.0001
+      warmup: 0.0
+      weight_decay: 0.01
+    - final_lr: 0.0
+      final_weight_decay: 0.1
+      lr: 0.005
+      start_lr: 0.005
+      warmup: 0.0
+      weight_decay: 0.1
+    - final_lr: 0.0
+      final_weight_decay: 0.1
+      lr: 0.003
+      start_lr: 0.003
+      warmup: 0.0
+      weight_decay: 0.1
+    - final_lr: 0.0
+      final_weight_decay: 0.1
+      lr: 0.001
+      start_lr: 0.001
+      warmup: 0.0
+      weight_decay: 0.1
+    - final_lr: 0.0
+      final_weight_decay: 0.1
+      lr: 0.0003
+      start_lr: 0.0003
+      warmup: 0.0
+      weight_decay: 0.1
+    - final_lr: 0.0
+      final_weight_decay: 0.1
+      lr: 0.0001
+      start_lr: 0.0001
+      warmup: 0.0
+      weight_decay: 0.1
+    - final_lr: 0.0
+      final_weight_decay: 0.4
+      lr: 0.005
+      start_lr: 0.005
+      warmup: 0.0
+      weight_decay: 0.4
+    - final_lr: 0.0
+      final_weight_decay: 0.4
+      lr: 0.003
+      start_lr: 0.003
+      warmup: 0.0
+      weight_decay: 0.4
+    - final_lr: 0.0
+      final_weight_decay: 0.4
+      lr: 0.001
+      start_lr: 0.001
+      warmup: 0.0
+      weight_decay: 0.4
+    - final_lr: 0.0
+      final_weight_decay: 0.4
+      lr: 0.0003
+      start_lr: 0.0003
+      warmup: 0.0
+      weight_decay: 0.4
+    - final_lr: 0.0
+      final_weight_decay: 0.4
+      lr: 0.0001
+      start_lr: 0.0001
+      warmup: 0.0
+      weight_decay: 0.4
+    - final_lr: 0.0
+      final_weight_decay: 0.8
+      lr: 0.005
+      start_lr: 0.005
+      warmup: 0.0
+      weight_decay: 0.8
+    - final_lr: 0.0
+      final_weight_decay: 0.8
+      lr: 0.003
+      start_lr: 0.003
+      warmup: 0.0
+      weight_decay: 0.8
+    - final_lr: 0.0
+      final_weight_decay: 0.8
+      lr: 0.001
+      start_lr: 0.001
+      warmup: 0.0
+      weight_decay: 0.8
+    - final_lr: 0.0
+      final_weight_decay: 0.8
+      lr: 0.0003
+      start_lr: 0.0003
+      warmup: 0.0
+      weight_decay: 0.8
+    - final_lr: 0.0
+      final_weight_decay: 0.8
+      lr: 0.0001
+      start_lr: 0.0001
+      warmup: 0.0
+      weight_decay: 0.8
+    num_epochs: 20
+    use_bfloat16: true
+    use_pos_embed: false
+model_kwargs:
+  checkpoint: /your_vjepa2_checkpoints/vitl-area-attn.pt
+  module_name: evals.video_classification_frozen.modelcustom.vit_encoder_multiclip
+  pretrain_kwargs:
+    encoder:
+      checkpoint_key: target_encoder
+      img_temporal_dim_size: null
+      model_name: vit_large
+      patch_size: 16
+      tubelet_size: 2
+      uniform_power: true
+      use_rope: true
+      # -- ST-A² configuration (must match pretraining)
+      use_area_attention: true
+      area_attention_layers:
+      - 0
+      - 18
+      area_spatial_splits: 2
+      area_temporal_splits: 2
+      area_residual_scale: 1.0
+  wrapper_kwargs:
+    max_frames: 128
+    use_pos_embed: false
