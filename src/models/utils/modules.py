@@ -545,92 +545,99 @@ class RoPEAreaAttention(nn.Module):
             full_ids = torch.arange(int(T_eff * H_p * W_p), device=x.device).unsqueeze(0).expand(B, -1)
             area_ids = self._compute_area_ids(full_ids, T_eff, H_p, W_p)
 
-        # -- Differentiable area attention via gather-pad-attend-scatter.
-        # Build per-area gather indices with padding, run attention per area,
-        # then scatter results back. All operations use torch.gather which is
-        # autograd-friendly.
+        # -- Vectorized area attention via sort-pad-attend-unsort.
+        # Instead of Python loops over areas and batch elements, we:
+        #   1. Sort tokens by area_id (single argsort)
+        #   2. Pad sorted sequence to uniform area sizes
+        #   3. Reshape into (B * num_areas) batched attention
+        #   4. Single SDPA call for all areas
+        #   5. Unsort back to original token order
         D = self.head_dim
 
-        # Compute area counts and max tokens per area
+        # Step 1: Compute area counts (vectorized, no Python loop)
+        ones = torch.ones(B, N, dtype=torch.long, device=x.device)
         area_counts = torch.zeros(B, self.num_areas, dtype=torch.long, device=x.device)
-        for a in range(self.num_areas):
-            area_counts[:, a] = (area_ids == a).sum(dim=1)
-        max_per_area = area_counts.max(dim=0).values  # [num_areas]
+        area_counts.scatter_add_(1, area_ids, ones)  # [B, num_areas]
+        max_per_area = area_counts.max().item()  # single global max for uniform padding
 
-        # Build padded gather indices for each area: [B, max_n_a]
-        # Padded positions point to index 0 (safe to gather, masked out in attn)
-        area_gather_indices = []
-        area_scatter_masks = []  # bool: True for real tokens, False for padding
-        for a in range(self.num_areas):
-            max_n = max_per_area[a].item()
-            if max_n == 0:
-                area_gather_indices.append(None)
-                area_scatter_masks.append(None)
-                continue
-            gather_idx = torch.zeros(B, max_n, dtype=torch.long, device=x.device)
-            valid_mask = torch.zeros(B, max_n, dtype=torch.bool, device=x.device)
-            for b in range(B):
-                idx = torch.where(area_ids[b] == a)[0]
-                n_b = idx.size(0)
-                gather_idx[b, :n_b] = idx
-                valid_mask[b, :n_b] = True
-            area_gather_indices.append(gather_idx)
-            area_scatter_masks.append(valid_mask)
+        # Step 2: Sort tokens by area_id
+        # Create stable sort key: area_id * N + position (preserves within-area order)
+        pos_arange = torch.arange(N, device=x.device).unsqueeze(0).expand(B, -1)
+        sort_keys = area_ids * N + pos_arange  # [B, N]
+        sort_idx = sort_keys.argsort(dim=1)  # [B, N]
+        unsort_idx = sort_idx.argsort(dim=1)  # inverse permutation [B, N]
 
-        # Process each area
-        out_parts = []  # list of (output, gather_idx, valid_mask, max_n) tuples
-        for a in range(self.num_areas):
-            max_n = max_per_area[a].item()
-            if max_n == 0:
-                continue
-            gather_idx = area_gather_indices[a]
-            valid_mask = area_scatter_masks[a]
+        # Gather q, k, v in sorted order
+        # sort_idx: [B, N] → [B, num_heads, N, D]
+        idx_exp = sort_idx.unsqueeze(1).unsqueeze(-1).expand(B, self.num_heads, N, D)
+        q_sorted = q.gather(2, idx_exp)  # [B, num_heads, N, D]
+        k_sorted = k.gather(2, idx_exp)
+        v_sorted = v.gather(2, idx_exp)
 
-            # Expand indices for gathering from [B, num_heads, N, D]
-            # gather_idx: [B, max_n] → [B, num_heads, max_n, D]
-            idx_exp = gather_idx.unsqueeze(1).unsqueeze(-1).expand(B, self.num_heads, max_n, D)
-            q_area = q.gather(2, idx_exp)  # [B, num_heads, max_n, D]
-            k_area = k.gather(2, idx_exp)
-            v_area = v.gather(2, idx_exp)
+        # Step 3: Pad to uniform area size and reshape
+        total_padded = self.num_areas * max_per_area
+        pad_len = total_padded - N
+        if pad_len > 0:
+            pad = torch.zeros(B, self.num_heads, pad_len, D, dtype=q.dtype, device=q.device)
+            q_sorted = torch.cat([q_sorted, pad], dim=2)
+            k_sorted = torch.cat([k_sorted, pad], dim=2)
+            v_sorted = torch.cat([v_sorted, pad], dim=2)
 
-            # Build attention mask to block padded KEY positions.
-            # Only mask columns (keys), not rows (queries), to avoid all-inf rows
-            # that cause nan in softmax. Padded query outputs are discarded during
-            # scatter (only real token positions are written back).
-            min_n = area_counts[:, a].min().item()
-            pad_mask = None
-            if min_n != max_n:
-                # valid_mask: [B, max_n] → key mask: [B, 1, 1, max_n]
-                vm_key = valid_mask.unsqueeze(1).unsqueeze(2)  # [B, 1, 1, max_n]
-                pad_mask = torch.where(
-                    vm_key,
-                    torch.zeros(1, dtype=q.dtype, device=q.device),
-                    torch.tensor(float("-inf"), dtype=q.dtype, device=q.device),
+        # Reshape: [B, num_heads, num_areas * max_per_area, D]
+        #       → [B, num_areas, num_heads, max_per_area, D]
+        #       → [B * num_areas, num_heads, max_per_area, D]
+        q_areas = q_sorted.view(B, self.num_heads, self.num_areas, max_per_area, D)
+        q_areas = q_areas.permute(0, 2, 1, 3, 4).reshape(B * self.num_areas, self.num_heads, max_per_area, D)
+        k_areas = k_sorted.view(B, self.num_heads, self.num_areas, max_per_area, D)
+        k_areas = k_areas.permute(0, 2, 1, 3, 4).reshape(B * self.num_areas, self.num_heads, max_per_area, D)
+        v_areas = v_sorted.view(B, self.num_heads, self.num_areas, max_per_area, D)
+        v_areas = v_areas.permute(0, 2, 1, 3, 4).reshape(B * self.num_areas, self.num_heads, max_per_area, D)
+
+        # Step 4: Build attention mask and single batched SDPA call
+        # Compute valid token counts per area-batch: [B * num_areas]
+        valid_counts = area_counts.reshape(B * self.num_areas)  # [B * num_areas]
+        needs_mask = pad_len > 0 or (valid_counts.min() != valid_counts.max())
+
+        pad_mask = None
+        if needs_mask:
+            # Build key mask: [B * num_areas, 1, 1, max_per_area]
+            pos_idx = torch.arange(max_per_area, device=x.device).unsqueeze(0)  # [1, max_per_area]
+            valid_mask = pos_idx < valid_counts.unsqueeze(1)  # [B * num_areas, max_per_area]
+            pad_mask = torch.where(
+                valid_mask.unsqueeze(1).unsqueeze(2),  # [B * num_areas, 1, 1, max_per_area]
+                torch.zeros(1, dtype=q.dtype, device=q.device),
+                torch.tensor(float("-inf"), dtype=q.dtype, device=q.device),
+            )
+
+        # Single batched SDPA call for ALL areas
+        if self.use_sdpa:
+            with torch.backends.cuda.sdp_kernel():
+                out_areas = F.scaled_dot_product_attention(
+                    q_areas, k_areas, v_areas,
+                    dropout_p=self.proj_drop_prob if self.training else 0.0,
+                    attn_mask=pad_mask,
                 )
+        else:
+            attn_scores = (q_areas @ k_areas.transpose(-2, -1)) * self.scale
+            if pad_mask is not None:
+                attn_scores = attn_scores + pad_mask
+            attn_scores = attn_scores.softmax(dim=-1)
+            attn_scores = self.attn_drop(attn_scores)
+            out_areas = attn_scores @ v_areas
 
-            # Run attention for this area
-            if self.use_sdpa:
-                with torch.backends.cuda.sdp_kernel():
-                    out_area = F.scaled_dot_product_attention(
-                        q_area, k_area, v_area,
-                        dropout_p=self.proj_drop_prob if self.training else 0.0,
-                        attn_mask=pad_mask,
-                    )
-            else:
-                attn_scores = (q_area @ k_area.transpose(-2, -1)) * self.scale
-                if pad_mask is not None:
-                    attn_scores = attn_scores + pad_mask
-                attn_scores = attn_scores.softmax(dim=-1)
-                attn_scores = self.attn_drop(attn_scores)
-                out_area = attn_scores @ v_area
+        # Step 5: Reshape back and unsort to original token order
+        # [B * num_areas, num_heads, max_per_area, D]
+        # → [B, num_areas, num_heads, max_per_area, D]
+        # → [B, num_heads, num_areas * max_per_area, D]
+        out = out_areas.view(B, self.num_areas, self.num_heads, max_per_area, D)
+        out = out.permute(0, 2, 1, 3, 4).reshape(B, self.num_heads, total_padded, D)
 
-            out_parts.append((out_area, idx_exp))
+        # Remove padding tokens
+        out = out[:, :, :N, :]
 
-        # Scatter results back to original positions using differentiable scatter_
-        # We accumulate into a zero tensor; each position is written exactly once.
-        x_out = torch.zeros_like(q)  # [B, num_heads, N, D]
-        for out_area, idx_exp in out_parts:
-            x_out = x_out.scatter(2, idx_exp, out_area)
+        # Unsort using inverse permutation
+        unsort_exp = unsort_idx.unsqueeze(1).unsqueeze(-1).expand(B, self.num_heads, N, D)
+        x_out = out.gather(2, unsort_exp)
 
         x = x_out.transpose(1, 2).reshape(B, N, C)
         if self.residual_scale != 1.0:
