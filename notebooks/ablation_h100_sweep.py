@@ -524,9 +524,10 @@ if __name__ == "__main__":
     print(f"  Model: {MODEL_CFG['model_name']}, steps: {MODEL_CFG['num_steps']}")
     print()
 
+    delta = "\u0394"
     header = (f"{'Resolution':<12} {'Visible':>7} {'Batch':>5} "
-              f"{'BL Time':>9} {'ST Time':>9} {'\u0394 Time':>9} "
-              f"{'BL Loss':>9} {'ST Loss':>9} {'\u0394 Loss':>9} "
+              f"{'BL Time':>9} {'ST Time':>9} {delta + ' Time':>9} "
+              f"{'BL Loss':>9} {'ST Loss':>9} {delta + ' Loss':>9} "
               f"{'BL Mem':>8} {'ST Mem':>8}")
     print(header)
     print("-" * 100)
