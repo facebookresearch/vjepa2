@@ -104,27 +104,36 @@ def load_checkpoint(
         epoch = checkpoint["epoch"]
 
     # -- loading encoder
+    # Use strict=False when annealing to allow loading baseline checkpoints
+    # into area-attention models (RoPEAreaAttention has identical weight
+    # structure to RoPEAttention, so all shared params load correctly).
     pretrained_dict = checkpoint["encoder"]
-    msg = encoder.load_state_dict(pretrained_dict)
+    msg = encoder.load_state_dict(pretrained_dict, strict=not is_anneal)
     logger.info(f"loaded pretrained encoder from epoch {epoch} with msg: {msg}")
 
     # -- loading predictor
     pretrained_dict = checkpoint["predictor"]
-    msg = predictor.load_state_dict(pretrained_dict)
+    msg = predictor.load_state_dict(pretrained_dict, strict=not is_anneal)
     logger.info(f"loaded pretrained predictor from epoch {epoch} with msg: {msg}")
 
     # -- loading target_encoder
     if target_encoder is not None:
         print(list(checkpoint.keys()))
         pretrained_dict = checkpoint["target_encoder"]
-        msg = target_encoder.load_state_dict(pretrained_dict)
+        msg = target_encoder.load_state_dict(pretrained_dict, strict=not is_anneal)
         logger.info(f"loaded pretrained target encoder from epoch {epoch} with msg: {msg}")
 
     # -- loading optimizer
-    opt.load_state_dict(checkpoint["opt"])
-    if scaler is not None:
-        scaler.load_state_dict(checkpoint["scaler"])
-    logger.info(f"loaded optimizers from epoch {epoch}")
+    # Skip optimizer/scaler restore when annealing from a different
+    # architecture (e.g., baseline → area-attention) because the optimizer
+    # state dict keys won't match the new parameter set.
+    if is_anneal:
+        logger.info("Annealing: skipping optimizer/scaler restore (fresh optimizer)")
+    else:
+        opt.load_state_dict(checkpoint["opt"])
+        if scaler is not None:
+            scaler.load_state_dict(checkpoint["scaler"])
+        logger.info(f"loaded optimizers from epoch {epoch}")
     logger.info(f"read-path: {r_path}")
     del checkpoint
 

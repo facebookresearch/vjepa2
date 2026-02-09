@@ -1,0 +1,124 @@
+# ST-A² fine-tune config: load baseline vitl.pt → train with area attention
+#
+# Uses the annealing flow to load the pretrained baseline checkpoint into
+# an area-attention model. RoPEAreaAttention has identical weight structure
+# to RoPEAttention, so all parameters transfer directly (strict=False).
+#
+# 1,000 steps with linear LR decay. Single-GPU setup for Lambda GH200.
+#
+# Usage (single GPU):
+#   python -m app.main --fname configs/train/vitl16/finetune-256px-16f-area-attn.yaml \
+#     --devices cuda:0
+
+app: vjepa
+nodes: 1
+tasks_per_node: 1
+cpus_per_task: 16
+mem_per_gpu: 80G
+folder: /your_folder/finetune/area_attn/vitl.256px.16f
+data:
+  dataset_type: VideoDataset
+  datasets:
+  - /your_k710_root_dir/k710_train_paths.csv
+  - /your_data_path/ssv2_train_paths.csv
+  - /your_data/howto_320p.csv
+  datasets_weights:
+  - 0.335
+  - 0.100
+  - 0.565
+  batch_size: 4
+  crop_size: 256
+  patch_size: 16
+  dataset_fpcs:
+  - 16
+  - 16
+  - 16
+  tubelet_size: 2
+  fps: 4
+  num_workers: 8
+  persistent_workers: true
+  pin_mem: true
+data_aug:
+  auto_augment: false
+  motion_shift: false
+  random_resize_aspect_ratio:
+  - 0.75
+  - 1.35
+  random_resize_scale:
+  - 0.3
+  - 1.0
+  reprob: 0.0
+loss:
+  loss_exp: 1.0
+mask:
+- aspect_ratio:
+  - 0.75
+  - 1.5
+  full_complement: false
+  max_keep: null
+  max_temporal_keep: 1.0
+  num_blocks: 8
+  spatial_scale:
+  - 0.15
+  - 0.15
+  temporal_scale:
+  - 1.0
+  - 1.0
+- aspect_ratio:
+  - 0.75
+  - 1.5
+  full_complement: false
+  max_keep: null
+  max_temporal_keep: 1.0
+  num_blocks: 2
+  spatial_scale:
+  - 0.7
+  - 0.7
+  temporal_scale:
+  - 1.0
+  - 1.0
+meta:
+  dtype: bfloat16
+  eval_freq: 100
+  load_checkpoint: true
+  read_checkpoint: null
+  save_every_freq: 250
+  seed: 239
+  use_sdpa: true
+model:
+  model_name: vit_large
+  pred_depth: 12
+  pred_embed_dim: 384
+  pred_num_heads: 12
+  uniform_power: true
+  use_activation_checkpointing: true
+  use_mask_tokens: true
+  use_rope: true
+  zero_init_mask_tokens: true
+  # -- ST-A² configuration
+  use_area_attention: true
+  area_attention_layers:
+  - 0
+  - 18
+  area_spatial_splits: 2
+  area_temporal_splits: 2
+  area_residual_scale: 1.0
+optimization:
+  # -- Annealing: load baseline vitl.pt and fine-tune with area attention
+  anneal_ckpt: /your_vjepa2_checkpoints/vitl.pt
+  is_anneal: true
+  resume_anneal: false
+  ema:
+  - 0.99925
+  - 0.99925
+  # -- 1,000 steps: 4 epochs × 200 ipe × 1.25 scale
+  epochs: 4
+  ipe: 200
+  ipe_scale: 1.25
+  # -- Linear LR decay from pretrained LR
+  lr: 0.000525
+  start_lr: 0.000525
+  final_lr: 1.0e-06
+  warmup: 0
+  weight_decay: 0.04
+  final_weight_decay: 0.04
