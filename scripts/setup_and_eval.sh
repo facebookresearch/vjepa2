@@ -64,8 +64,13 @@ echo "  $EXTRACTED videos extracted."
 
 # --- 6. Generate CSV + update configs ---
 echo "[6/7] Generating CSV manifest and configs..."
+# Download annotations for flat layout (CVDF tars extract without class dirs)
+if [ ! -f ~/data/k400/val.csv ]; then
+    wget -q https://s3.amazonaws.com/kinetics/400/annotations/val.csv -P ~/data/k400/
+fi
 python ~/vjepa2/scripts/prepare_k400_csv.py \
     --val_dir ~/data/k400/val \
+    --annotations ~/data/k400/val.csv \
     --output ~/data/k400/k400_val_paths.csv
 
 # Baseline config
