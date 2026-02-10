@@ -121,83 +121,78 @@ VIDEO_COUNT=$(wc -l < "$K400_CSV")
 echo "  CSV has $VIDEO_COUNT videos."
 
 # ------------------------------------------------------------------
-# 6. Create fine-tune config with local paths
+# 6. Create configs with local paths (all via Python for reliability)
 # ------------------------------------------------------------------
 echo "[7/8] Preparing configs..."
 mkdir -p "$FINETUNE_OUT" "$EVAL_BASELINE" "$EVAL_FINETUNED"
 
-# --- Fine-tune config: use K400 val as SSL training data ---
 FINETUNE_CFG="$REPO_DIR/configs/train/vitl16/finetune-local.yaml"
-cp "$REPO_DIR/configs/train/vitl16/finetune-256px-16f-area-attn.yaml" "$FINETUNE_CFG"
-sed -i \
-    -e "s|/your_folder/finetune/area_attn/vitl.256px.16f|$FINETUNE_OUT|" \
-    -e "s|/your_vjepa2_checkpoints/vitl.pt|$CKPT_DIR/vitl.pt|" \
-    -e "/datasets:/,/datasets_weights:/{
-        /datasets:/!{/datasets_weights:/!d}
-    }" \
-    -e "s|datasets:|datasets:\n  - $K400_CSV|" \
-    -e "/datasets_weights:/,/batch_size:/{
-        /datasets_weights:/!{/batch_size:/!d}
-    }" \
-    -e "s|datasets_weights:|datasets_weights:\n  - 1.0|" \
-    -e "/dataset_fpcs:/,/tubelet_size:/{
-        /dataset_fpcs:/!{/tubelet_size:/!d}
-    }" \
-    -e "s|dataset_fpcs:|dataset_fpcs:\n  - 16|" \
-    "$FINETUNE_CFG"
-
-# --- Baseline eval config ---
 EVAL_BASELINE_CFG="$REPO_DIR/configs/eval/vitl/k400-baseline-local.yaml"
-cp "$REPO_DIR/configs/eval/vitl/k400.yaml" "$EVAL_BASELINE_CFG"
-sed -i \
-    -e "s|/your_vjepa2_checkpoints/vitl.pt|$CKPT_DIR/vitl.pt|" \
-    -e "s|/your_data_path/k400_train_paths.csv|$K400_CSV|" \
-    -e "s|/your_data_path/k400_val_paths.csv|$K400_CSV|" \
-    -e "s|/your_folder/evals/vitl/k400|$EVAL_BASELINE|" \
-    -e "s|num_segments: 8|num_segments: 1|" \
-    -e "s|num_views_per_segment: 3|num_views_per_segment: 1|" \
-    -e "s|batch_size: 32|batch_size: 16|" \
-    "$EVAL_BASELINE_CFG"
-# Trim HP sweeps to 3 combos for speed
-python -c "
-import yaml, sys
-cfg_path = '$EVAL_BASELINE_CFG'
-with open(cfg_path) as f:
-    cfg = yaml.safe_load(f)
-# Keep only 3 HP combos
-if 'multihead_kwargs' in cfg.get('optimization', {}):
-    cfg['optimization']['multihead_kwargs'] = cfg['optimization']['multihead_kwargs'][:3]
-cfg['optimization']['num_epochs'] = 3
-cfg['optimization']['resume_checkpoint'] = False
-with open(cfg_path, 'w') as f:
-    yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
-"
-
-# --- Finetuned ST-A² eval config ---
 EVAL_FINETUNED_CFG="$REPO_DIR/configs/eval/vitl/k400-finetuned-local.yaml"
-cp "$REPO_DIR/configs/eval/vitl/k400-area-attn.yaml" "$EVAL_FINETUNED_CFG"
-# Point to fine-tuned checkpoint (latest saved during fine-tune)
-sed -i \
-    -e "s|/your_vjepa2_checkpoints/vitl-area-attn.pt|$FINETUNE_OUT/jepa-latest.pth.tar|" \
-    -e "s|/your_data_path/k400_train_paths.csv|$K400_CSV|" \
-    -e "s|/your_data_path/k400_val_paths.csv|$K400_CSV|" \
-    -e "s|/your_folder/evals/vitl/k400-area-attn|$EVAL_FINETUNED|" \
-    -e "s|num_segments: 8|num_segments: 1|" \
-    -e "s|num_views_per_segment: 3|num_views_per_segment: 1|" \
-    -e "s|batch_size: 32|batch_size: 16|" \
-    "$EVAL_FINETUNED_CFG"
-python -c "
-import yaml, sys
-cfg_path = '$EVAL_FINETUNED_CFG'
-with open(cfg_path) as f:
+
+python3 << PYEOF
+import yaml
+
+CKPT = "$CKPT_DIR/vitl.pt"
+K400 = "$K400_CSV"
+FT_OUT = "$FINETUNE_OUT"
+EVAL_BASE = "$EVAL_BASELINE"
+EVAL_FT = "$EVAL_FINETUNED"
+REPO = "$REPO_DIR"
+
+# --- 1. Fine-tune config: swap datasets to single K400 CSV ---
+with open(f"{REPO}/configs/train/vitl16/finetune-256px-16f-area-attn.yaml") as f:
     cfg = yaml.safe_load(f)
-if 'multihead_kwargs' in cfg.get('optimization', {}):
-    cfg['optimization']['multihead_kwargs'] = cfg['optimization']['multihead_kwargs'][:3]
-cfg['optimization']['num_epochs'] = 3
-cfg['optimization']['resume_checkpoint'] = False
-with open(cfg_path, 'w') as f:
+
+cfg["folder"] = FT_OUT
+cfg["data"]["datasets"] = [K400]
+cfg["data"]["datasets_weights"] = [1.0]
+cfg["data"]["dataset_fpcs"] = [16]
+cfg["optimization"]["anneal_ckpt"] = CKPT
+
+with open(f"{REPO}/configs/train/vitl16/finetune-local.yaml", "w") as f:
     yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
-"
+
+# --- 2. Baseline eval config ---
+with open(f"{REPO}/configs/eval/vitl/k400.yaml") as f:
+    cfg = yaml.safe_load(f)
+
+cfg["folder"] = EVAL_BASE
+cfg["resume_checkpoint"] = False
+cfg["experiment"]["data"]["dataset_train"] = K400
+cfg["experiment"]["data"]["dataset_val"] = K400
+cfg["experiment"]["data"]["num_segments"] = 1
+cfg["experiment"]["data"]["num_views_per_segment"] = 1
+cfg["experiment"]["optimization"]["batch_size"] = 16
+cfg["experiment"]["optimization"]["num_epochs"] = 3
+cfg["experiment"]["optimization"]["multihead_kwargs"] = \
+    cfg["experiment"]["optimization"]["multihead_kwargs"][:3]
+cfg["model_kwargs"]["checkpoint"] = CKPT
+
+with open(f"{REPO}/configs/eval/vitl/k400-baseline-local.yaml", "w") as f:
+    yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
+
+# --- 3. Finetuned ST-A² eval config ---
+with open(f"{REPO}/configs/eval/vitl/k400-area-attn.yaml") as f:
+    cfg = yaml.safe_load(f)
+
+cfg["folder"] = EVAL_FT
+cfg["resume_checkpoint"] = False
+cfg["experiment"]["data"]["dataset_train"] = K400
+cfg["experiment"]["data"]["dataset_val"] = K400
+cfg["experiment"]["data"]["num_segments"] = 1
+cfg["experiment"]["data"]["num_views_per_segment"] = 1
+cfg["experiment"]["optimization"]["batch_size"] = 16
+cfg["experiment"]["optimization"]["num_epochs"] = 3
+cfg["experiment"]["optimization"]["multihead_kwargs"] = \
+    cfg["experiment"]["optimization"]["multihead_kwargs"][:3]
+cfg["model_kwargs"]["checkpoint"] = f"{FT_OUT}/jepa-latest.pth.tar"
+
+with open(f"{REPO}/configs/eval/vitl/k400-finetuned-local.yaml", "w") as f:
+    yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
+
+print("  Configs written successfully.")
+PYEOF
 
 echo "  Configs ready:"
 echo "    Fine-tune:  $FINETUNE_CFG"
