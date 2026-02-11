@@ -186,7 +186,7 @@ cfg["experiment"]["optimization"]["batch_size"] = 16
 cfg["experiment"]["optimization"]["num_epochs"] = 3
 cfg["experiment"]["optimization"]["multihead_kwargs"] = \
     cfg["experiment"]["optimization"]["multihead_kwargs"][:3]
-cfg["model_kwargs"]["checkpoint"] = f"{FT_OUT}/jepa-latest.pth.tar"
+cfg["model_kwargs"]["checkpoint"] = f"{FT_OUT}/latest.pt"
 
 with open(f"{REPO}/configs/eval/vitl/k400-finetuned-local.yaml", "w") as f:
     yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
