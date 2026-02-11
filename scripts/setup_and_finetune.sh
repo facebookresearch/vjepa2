@@ -168,9 +168,10 @@ EVAL_FT_DIR = "$EVAL_FINETUNED"
 REPO = "$REPO_DIR"
 
 EVAL_BATCH_SIZE = 16
-EVAL_NUM_EPOCHS = 3
+EVAL_NUM_EPOCHS = 10
 EVAL_NUM_SEGMENTS = 1
 EVAL_NUM_VIEWS = 1
+EVAL_NUM_HP_SWEEPS = 5
 
 def configure_eval(cfg, folder, checkpoint):
     cfg["folder"] = folder
@@ -182,7 +183,7 @@ def configure_eval(cfg, folder, checkpoint):
     cfg["experiment"]["optimization"]["batch_size"] = EVAL_BATCH_SIZE
     cfg["experiment"]["optimization"]["num_epochs"] = EVAL_NUM_EPOCHS
     cfg["experiment"]["optimization"]["multihead_kwargs"] = \
-        cfg["experiment"]["optimization"]["multihead_kwargs"][:3]
+        cfg["experiment"]["optimization"]["multihead_kwargs"][:EVAL_NUM_HP_SWEEPS]
     cfg["model_kwargs"]["checkpoint"] = checkpoint
     return cfg
 
