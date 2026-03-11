@@ -81,6 +81,7 @@ def init_data(
             num_workers=num_workers,
             pin_mem=pin_mem,
             persistent_workers=persistent_workers,
+            drop_last=drop_last,
             world_size=world_size,
             rank=rank,
             deterministic=deterministic,
