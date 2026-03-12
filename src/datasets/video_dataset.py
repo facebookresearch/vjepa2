@@ -348,15 +348,10 @@ class VideoDataset(torch.utils.data.Dataset):
                 # If partition overlap is allowed and partition_len < clip_len
                 # then start_indx of segment i+1 will lie within segment i
                 else:
-                    sample_len = min(clip_len, len(vr)) - 1
-                    indices = np.linspace(0, sample_len, num=sample_len // fstp)
-                    indices = np.concatenate(
-                        (
-                            indices,
-                            np.ones(fpc - sample_len // fstp) * sample_len,
-                        )
-                    )
-                    indices = np.clip(indices, 0, sample_len - 1).astype(np.int64)
+                    max_idx = min(clip_len, len(vr)) - 1
+                    indices = np.clip(
+                        np.arange(fpc) * fstp, 0, max_idx
+                    ).astype(np.int64)
                     # --
                     clip_step = 0
                     if len(vr) > clip_len:
