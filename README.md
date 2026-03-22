@@ -34,7 +34,7 @@ V-JEPA 2 is a self-supervised approach to training video encoders, using interne
 Lorenzo Mur-Labadia, Matthew Muckley, Amir Bar, Mahmoud Assran, Koustuv Sinha, Michael
 Rabbat, Yann LeCun, Nicolas Ballas, Adrien Bardes
 
-[[`Paper`](https://arxiv.org/abs/TODO)] [[`BibTex`](#Citation)]
+[[`Paper`](https://arxiv.org/abs/2603.14482)] [[`BibTex`](#Citation)]
 
 V-JEPA 2.1 improves the training recipe to focus on learning high-quality and temporally consistent dense features, as higlighted by PCA visualizations:
 
