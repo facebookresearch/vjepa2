@@ -23,6 +23,7 @@ def make_transforms(
     crop_size=224,
     num_views_per_clip=1,
     normalize=((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    preserve_border=False
 ):
 
     if not training and num_views_per_clip > 1:
@@ -44,6 +45,7 @@ def make_transforms(
             motion_shift=motion_shift,
             crop_size=crop_size,
             normalize=normalize,
+            preserve_border=preserve_border
         )
     return _frames_augmentation
 
@@ -61,11 +63,12 @@ class VideoTransform(object):
         motion_shift=False,
         crop_size=224,
         normalize=((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        preserve_border=False
     ):
 
         self.training = training
 
-        short_side_size = int(crop_size * 256 / 224)
+        short_side_size = int(crop_size * 256 / 224) if not preserve_border else crop_size
         self.eval_transform = video_transforms.Compose(
             [
                 video_transforms.Resize(short_side_size, interpolation="bilinear"),
