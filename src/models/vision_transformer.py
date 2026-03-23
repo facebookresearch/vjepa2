@@ -45,6 +45,12 @@ class VisionTransformer(nn.Module):
         use_activation_checkpointing=False,
         use_rope=False,
         handle_nonsquare_inputs=True,
+        # -- ST-A² (Spatiotemporal Area Attention) params
+        use_area_attention=False,
+        area_attention_layers=None,
+        area_spatial_splits=2,
+        area_temporal_splits=2,
+        area_residual_scale=1.0,
         **kwargs
     ):
         super().__init__()
@@ -83,6 +89,13 @@ class VisionTransformer(nn.Module):
         else:
             self.pos_embed = nn.Parameter(torch.zeros(1, self.num_patches, embed_dim), requires_grad=False)
 
+        # -- Determine which layers use area attention (hybrid allocation).
+        # area_attention_layers: [start, end) layer indices, or None for all.
+        # Default hybrid: first 75% of layers get area attention, last 25% full.
+        if use_area_attention and area_attention_layers is None:
+            area_attention_layers = [0, int(depth * 0.75)]
+        aa_start, aa_end = area_attention_layers if use_area_attention else (0, 0)
+
         # Attention Blocks
         self.blocks = nn.ModuleList(
             [
@@ -102,6 +115,10 @@ class VisionTransformer(nn.Module):
                     attn_drop=attn_drop_rate,
                     drop_path=dpr[i],
                     norm_layer=norm_layer,
+                    use_area_attention=use_area_attention and (aa_start <= i < aa_end),
+                    area_spatial_splits=area_spatial_splits,
+                    area_temporal_splits=area_temporal_splits,
+                    area_residual_scale=area_residual_scale,
                 )
                 for i in range(depth)
             ]

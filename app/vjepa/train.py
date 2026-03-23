@@ -96,6 +96,12 @@ def main(args, resume_preempt=False):
     use_silu = cfgs_model.get("use_silu", False)
     use_pred_silu = cfgs_model.get("use_pred_silu", False)
     wide_silu = cfgs_model.get("wide_silu", True)
+    # -- ST-A² (Spatiotemporal Area Attention)
+    use_area_attention = cfgs_model.get("use_area_attention", False)
+    area_attention_layers = cfgs_model.get("area_attention_layers", None)
+    area_spatial_splits = cfgs_model.get("area_spatial_splits", 2)
+    area_temporal_splits = cfgs_model.get("area_temporal_splits", 2)
+    area_residual_scale = cfgs_model.get("area_residual_scale", 1.0)
 
     # -- DATA
     cfgs_data = args.get("data")
@@ -218,6 +224,11 @@ def main(args, resume_preempt=False):
         wide_silu=wide_silu,
         use_rope=use_rope,
         use_activation_checkpointing=use_activation_checkpointing,
+        use_area_attention=use_area_attention,
+        area_attention_layers=area_attention_layers,
+        area_spatial_splits=area_spatial_splits,
+        area_temporal_splits=area_temporal_splits,
+        area_residual_scale=area_residual_scale,
     )
     target_encoder = copy.deepcopy(encoder)
 

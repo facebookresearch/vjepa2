@@ -104,27 +104,36 @@ def load_checkpoint(
         epoch = checkpoint["epoch"]
 
     # -- loading encoder
+    # Use strict=False when annealing to allow loading baseline checkpoints
+    # into area-attention models (RoPEAreaAttention has identical weight
+    # structure to RoPEAttention, so all shared params load correctly).
     pretrained_dict = checkpoint["encoder"]
-    msg = encoder.load_state_dict(pretrained_dict)
+    msg = encoder.load_state_dict(pretrained_dict, strict=not is_anneal)
     logger.info(f"loaded pretrained encoder from epoch {epoch} with msg: {msg}")
 
     # -- loading predictor
     pretrained_dict = checkpoint["predictor"]
-    msg = predictor.load_state_dict(pretrained_dict)
+    msg = predictor.load_state_dict(pretrained_dict, strict=not is_anneal)
     logger.info(f"loaded pretrained predictor from epoch {epoch} with msg: {msg}")
 
     # -- loading target_encoder
     if target_encoder is not None:
         print(list(checkpoint.keys()))
         pretrained_dict = checkpoint["target_encoder"]
-        msg = target_encoder.load_state_dict(pretrained_dict)
+        msg = target_encoder.load_state_dict(pretrained_dict, strict=not is_anneal)
         logger.info(f"loaded pretrained target encoder from epoch {epoch} with msg: {msg}")
 
     # -- loading optimizer
-    opt.load_state_dict(checkpoint["opt"])
-    if scaler is not None:
-        scaler.load_state_dict(checkpoint["scaler"])
-    logger.info(f"loaded optimizers from epoch {epoch}")
+    # Skip optimizer/scaler restore when annealing from a different
+    # architecture (e.g., baseline → area-attention) because the optimizer
+    # state dict keys won't match the new parameter set.
+    if is_anneal:
+        logger.info("Annealing: skipping optimizer/scaler restore (fresh optimizer)")
+    else:
+        opt.load_state_dict(checkpoint["opt"])
+        if scaler is not None:
+            scaler.load_state_dict(checkpoint["scaler"])
+        logger.info(f"loaded optimizers from epoch {epoch}")
     logger.info(f"read-path: {r_path}")
     del checkpoint
 
@@ -158,6 +167,12 @@ def init_video_model(
     use_pred_silu=False,
     wide_silu=False,
     use_activation_checkpointing=False,
+    # -- ST-A² params
+    use_area_attention=False,
+    area_attention_layers=None,
+    area_spatial_splits=2,
+    area_temporal_splits=2,
+    area_residual_scale=1.0,
 ):
     encoder = video_vit.__dict__[model_name](
         img_size=crop_size,
@@ -170,6 +185,11 @@ def init_video_model(
         wide_silu=wide_silu,
         use_activation_checkpointing=use_activation_checkpointing,
         use_rope=use_rope,
+        use_area_attention=use_area_attention,
+        area_attention_layers=area_attention_layers,
+        area_spatial_splits=area_spatial_splits,
+        area_temporal_splits=area_temporal_splits,
+        area_residual_scale=area_residual_scale,
     )
     encoder = MultiSeqWrapper(encoder)
     predictor = vit_pred.__dict__["vit_predictor"](
