@@ -1,0 +1,56 @@
+== OFF ==
+{
+  "N": 100,
+  "final_err_m": {
+    "mean": 0.1937844306230545,
+    "std": 0.008996892720460892
+  },
+  "monotonicity": {
+    "mean": 0.15200001001358032,
+    "std": 0.08541663736104965
+  },
+  "steps_to_tol": {
+    "mean": 6.849999904632568,
+    "std": 0.8529360294342041
+  },
+  "avg_latency_ms": {
+    "mean": 742.9222412109375,
+    "std": 423.6865234375
+  }
+}
+Power: {
+  "file": "siml/results/reaching_off/power.csv",
+  "gpu_energy_Wh": 7.951438259722219,
+  "avg_power_W": 11.168955164131306,
+  "duration_s": 2556.719
+}
+
+== FEP ==
+{
+  "N": 100,
+  "final_err_m": {
+    "mean": 0.193206787109375,
+    "std": 0.008694416843354702
+  },
+  "monotonicity": {
+    "mean": 0.14600001275539398,
+    "std": 0.08879189193248749
+  },
+  "steps_to_tol": {
+    "mean": 6.889999866485596,
+    "std": 0.7732399702072144
+  },
+  "avg_latency_ms": {
+    "mean": 1133.15966796875,
+    "std": 426.574462890625
+  }
+}
+Power: {
+  "file": "siml/results/reaching_fep/power.csv",
+  "gpu_energy_Wh": 1.680635927777778,
+  "avg_power_W": 8.427732942039619,
+  "duration_s": 715.695
+}
+
+Wh/episode OFF: 0.0795143825972222
+Wh/episode FEP: 0.01680635927777778

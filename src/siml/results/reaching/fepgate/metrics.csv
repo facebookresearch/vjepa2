@@ -1,0 +1,6 @@
+ep,mode,steps,final_err_m,monotonicity,steps_to_tol,avg_latency_ms
+0,fepgate,6,0.194034,0.000,7,538.82
+1,fepgate,6,0.218743,0.000,7,427.95
+2,fepgate,6,0.172983,0.200,7,1193.77
+3,fepgate,6,0.187502,0.200,7,313.52
+4,fepgate,6,0.206858,0.200,7,1251.33

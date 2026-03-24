@@ -1,0 +1,33 @@
+episodes: 100
+horizon: 1
+cem:
+  samples: 128
+  iters: 5
+action_dim: 7
+action_l1_ball: 0.075
+goal_tolerance_m: 0.04
+predictor_entry: siml.evals.scaffold:make_predictor
+mpc_entry: siml.evals.scaffold:run_mpc
+surprise_entry: siml.surprise.pickplace_surprise:fep_surprise_pickplace
+tau: 0.000796750420704484
+s_k:
+  ee:
+  - 0.0
+  - 0.0
+  - 0.05
+  cube:
+  - 0.05
+  - -0.1
+  - 0.05
+  pad:
+  - 0.0
+  - -0.1
+  - 0.05
+  grip: 0
+latents:
+  z_k_path: null
+  z_g_path: null
+io:
+  out_dir: siml/results/reaching
+lambda_penalty: 0.5
+gate_hard: true

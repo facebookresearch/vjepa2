@@ -1,0 +1,41 @@
+# core planner
+episodes: 100
+horizon: 1
+cem: {samples: 128, iters: 5}
+action_dim: 7
+action_l1_ball: 0.075
+goal_tolerance_m: 0.04
+
+# predictors / runners
+predictor_entry: "siml.evals.scaffold:make_predictor"
+mpc_entry: "siml.evals.scaffold:run_mpc"
+
+# gate (FEP)
+binary_mode: fepgate
+gate_hard: true
+lambda_penalty: 0.0
+tau: 0.000796750420704484
+
+# SIML CLI
+surprise_entry: "siml.surprise.cli_bridge:siml_online_step"
+siml:
+  backend: cli
+  runtime_bin: siml/bin/siml_runtime
+  agent_memory: siml/memory/vjepa2_ac.mem
+  memory_mode: online
+  autosave_every: 500
+
+# fixed start/goal (ok)
+s_k:
+  ee:   [0.00,  0.00, 0.05]
+  cube: [0.05, -0.10, 0.05]
+  pad:  [0.00, -0.10, 0.05]
+  grip: 0
+
+# real latents (these must exist)
+latents:
+  z_k_path: "siml/tmp/z_k.npy"
+  z_g_path: "siml/tmp/z_g.npy"
+
+io:
+  out_dir: "siml/results/reaching"
