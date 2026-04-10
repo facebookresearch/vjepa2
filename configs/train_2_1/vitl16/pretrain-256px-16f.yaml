@@ -120,7 +120,7 @@ model:
   n_registers: 0
   n_registers_predictor: 0
   normalize_predictor: false
-  pred_depth: 24
+  pred_depth: 12
   pred_embed_dim: 384
   pred_is_causal: false
   pred_local_window:

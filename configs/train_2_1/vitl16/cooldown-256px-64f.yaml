@@ -118,7 +118,7 @@ model:
   model_name: vit_large
   n_registers: 0
   normalize_predictor: false
-  pred_depth: 24
+  pred_depth: 12
   pred_embed_dim: 384
   pred_num_heads: 12
   uniform_power: true
