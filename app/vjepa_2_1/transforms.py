@@ -5,11 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
-
-import src.datasets.utils.video.transforms as video_transforms
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
+
+import src.datasets.utils.video.transforms as video_transforms
 from src.datasets.utils.video.randerase import RandomErasing
 
 

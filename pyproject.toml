@@ -4,3 +4,14 @@ line_length=119
 
 [tool.black]
 line-length = 119
+
+[tool.ruff]
+line-length = 119
+extend-exclude = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501", "E402", "E731", "E722", "E741", "E721", "E701", "F841", "F403", "F405"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]

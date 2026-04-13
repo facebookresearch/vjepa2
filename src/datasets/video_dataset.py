@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torchvision
-from decord import cpu, VideoReader
+from decord import VideoReader, cpu
 
 from src.datasets.utils.dataloader import (
     ConcatIndices,

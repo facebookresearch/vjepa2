@@ -21,6 +21,8 @@ import numpy as np
 import torch
 import torch.multiprocessing as mp
 import torch.nn.functional as F
+from torch.nn.parallel import DistributedDataParallel
+
 from app.vjepa_2_1.models.utils.masks_dist import compute_mask_distance
 from app.vjepa_2_1.models.utils.modules import Lambda_LinearWarmupHold
 from app.vjepa_2_1.transforms import make_transforms
@@ -35,8 +37,6 @@ from src.masks.multiseq_multiblock3d import MaskCollator
 from src.masks.utils import apply_masks
 from src.utils.distributed import init_distributed
 from src.utils.logging import AverageMeter, CSVLogger, get_logger, gpu_timer
-from torch.nn.parallel import DistributedDataParallel
-
 
 log_timings = True
 log_freq = 10

@@ -8,9 +8,9 @@ from typing import Iterator, Optional
 
 import numpy as np
 import torch
+from torch.utils.data import DistributedSampler, RandomSampler
 
 from src.utils.logging import get_logger
-from torch.utils.data import DistributedSampler, RandomSampler
 
 logger = get_logger("WeightedSampler")
 

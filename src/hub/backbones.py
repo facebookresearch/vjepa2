@@ -46,6 +46,8 @@ def _make_vjepa2_ac_model(
 ):
     from ..models import (
         ac_predictor as vit_ac_predictor,
+    )
+    from ..models import (
         vision_transformer as vit_encoder,
     )
 
@@ -101,7 +103,8 @@ def _make_vjepa2_model(
     pretrained: bool = True,
     **kwargs,
 ):
-    from ..models import predictor as vit_predictor, vision_transformer as vit_encoder
+    from ..models import predictor as vit_predictor
+    from ..models import vision_transformer as vit_encoder
 
     vit_encoder_kwargs = dict(
         patch_size=patch_size,
@@ -224,7 +227,8 @@ def _make_vjepa2_1_model(
     pretrained: bool = True,
     **kwargs,
 ):
-    from app.vjepa_2_1.models import predictor as vit_predictor, vision_transformer as vit_encoder
+    from app.vjepa_2_1.models import predictor as vit_predictor
+    from app.vjepa_2_1.models import vision_transformer as vit_encoder
 
     vit_encoder_kwargs = dict(
         patch_size=patch_size,
