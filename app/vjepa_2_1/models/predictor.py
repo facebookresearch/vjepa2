@@ -10,10 +10,9 @@ from functools import partial
 import torch
 import torch.nn as nn
 
+from app.vjepa_2_1.models.utils.modules import Block
 from src.masks.utils import apply_masks
 from src.utils.tensors import repeat_interleave_batch, trunc_normal_
-
-from app.vjepa_2_1.models.utils.modules import Block
 
 
 class VisionTransformerPredictor(nn.Module):

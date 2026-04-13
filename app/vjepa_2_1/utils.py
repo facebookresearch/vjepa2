@@ -7,11 +7,12 @@
 import logging
 import sys
 
-import app.vjepa_2_1.models.predictor as vit_pred
-import app.vjepa_2_1.models.vision_transformer as video_vit
 import torch
 import torch.nn.functional as F
 import yaml
+
+import app.vjepa_2_1.models.predictor as vit_pred
+import app.vjepa_2_1.models.vision_transformer as video_vit
 from app.vjepa_2_1.wrappers import MultiSeqWrapper, PredictorMultiSeqWrapper
 from src.utils.checkpoint_loader import robust_checkpoint_loader
 from src.utils.schedulers import (

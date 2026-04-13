@@ -10,11 +10,10 @@ from functools import partial
 import torch
 import torch.nn as nn
 
-from src.masks.utils import apply_masks
-from src.utils.tensors import trunc_normal_
-
 from app.vjepa_2_1.models.utils.modules import Block
 from app.vjepa_2_1.models.utils.patch_embed import PatchEmbed, PatchEmbed3D
+from src.masks.utils import apply_masks
+from src.utils.tensors import trunc_normal_
 
 
 class VisionTransformer(nn.Module):
