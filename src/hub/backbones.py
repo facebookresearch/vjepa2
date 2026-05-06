@@ -5,10 +5,7 @@
 
 import torch
 
-# VJEPA_BASE_URL = "https://dl.fbaipublicfiles.com/vjepa2"
-
-# for testing
-VJEPA_BASE_URL = "http://localhost:8300"
+VJEPA_BASE_URL = "https://dl.fbaipublicfiles.com/vjepa2"
 
 ARCH_NAME_MAP = {
     # V-JEPA 2
