@@ -1,6 +1,48 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vjepa2"
+version = "0.0.2"
+requires-python = ">=3.11"
+dependencies = [
+    "torch>=2",
+    "torchvision",
+    "tensorboard",
+    "wandb",
+    "iopath",
+    "pyyaml",
+    "numpy",
+    "opencv-python",
+    "submitit",
+    "braceexpand",
+    "webdataset",
+    "timm",
+    "transformers",
+    "peft",
+    "pandas",
+    "einops",
+    "beartype",
+    "psutil",
+    "h5py",
+    "fire",
+    "python-box",
+    "scikit-image",
+    "ftfy",
+    "jupyter",
+    "decord2",
+    "matplotlib>=3.10.9",
+    "scikit-learn>=1.8.0",
+    "onnxscript>=0.7.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["src*"]
+
 [tool.isort]
-profile="black"
-line_length=119
+profile = "black"
+line_length = 119
 
 [tool.black]
 line-length = 119
