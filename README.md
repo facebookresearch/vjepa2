@@ -275,6 +275,8 @@ python scripts/vjepa2_doctor.py \
 
 Add `--json` for machine-readable output. Exits non-zero on failure.
 
+> **Security:** Only run this tool on checkpoint files from trusted sources (official Meta releases or your own training runs). The doctor may fall back to `torch.load(..., weights_only=False)` when a checkpoint contains custom classes; deserializing untrusted pickle payloads can execute arbitrary code. Do not point it at user uploads in CI without sandboxing.
+
 #### Pretrained checkpoints on Huggingface
 
 You can also use our pretrained checkpoints on [Huggingface for V-JEPA 2](https://huggingface.co/collections/facebook/v-jepa-2-6841bad8413014e185b497a6).
