@@ -6,6 +6,7 @@ nodes: 8
 max_workers: 8
 resume_checkpoint: true
 val_only: true
+classifier_checkpoint: /your_vjepa2_checkpoints/evals/ssv2-vitl-16x2x3.pt
 tag: ssv2-vitl16-16x2x3-16f
 tasks_per_node: 8
 experiment:

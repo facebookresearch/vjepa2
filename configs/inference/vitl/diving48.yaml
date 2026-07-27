@@ -7,6 +7,7 @@ eval_name: video_classification_frozen
 folder: /your_folder/evals/vitl/diving48
 resume_checkpoint: true
 val_only: true
+classifier_checkpoint: /your_vjepa2_checkpoints/evals/diving48-vitl-256.pt
 experiment:
   classifier:
     num_probe_blocks: 4
