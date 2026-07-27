@@ -62,7 +62,7 @@ def main(args_eval, resume_preempt=False):
     # -- EXPERIMENT
     pretrain_folder = args_eval.get("folder", None)
     resume_checkpoint = args_eval.get("resume_checkpoint", False) or resume_preempt
-    val_only = args_eval.get("val_only", False)
+    classifier_checkpoint = args_eval.get("classifier_checkpoint", None)
     eval_tag = args_eval.get("tag", None)
 
     # -- PRETRAIN
@@ -288,14 +288,17 @@ def main(args_eval, resume_preempt=False):
 
     # -- load training checkpoint
     start_epoch = 0
-    if resume_checkpoint and os.path.exists(latest_path):
+    if classifier_checkpoint is not None and not os.path.exists(classifier_checkpoint):
+        raise FileNotFoundError(f"classifier_checkpoint not found: {classifier_checkpoint}")
+    r_path = classifier_checkpoint if classifier_checkpoint is not None else latest_path
+    if (resume_checkpoint or classifier_checkpoint is not None) and os.path.exists(r_path):
         classifiers, optimizer, scaler, start_epoch = load_checkpoint(
             device=device,
-            r_path=latest_path,
+            r_path=r_path,
             classifiers=classifiers,
             opt=optimizer,
             scaler=scaler,
-            val_only=val_only,
+            val_only=val_only or classifier_checkpoint is not None,
         )
         for _ in range(start_epoch * ipe):
             [s.step() for s in scheduler]

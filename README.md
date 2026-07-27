@@ -431,11 +431,16 @@ python -m evals.main_distributed \
 #### Inference from existing probes
 
 Use provided inference configs under [Evaluation Attentive Probes](#evaluation-attentive-probes).
-Download the corresponding checkpoint, rename it to 'latest.pt', and create a folder with the checkpoint inside, with the format matching the variables in the config:
+Download the corresponding checkpoint and point `classifier_checkpoint` at it in the config:
+```
+classifier_checkpoint: /your_vjepa2_checkpoints/evals/ssv2-vitl-16x2x3.pt
+```
+Then run inference, locally or distributed, using the same evaluation commands as above, but with configs from `configs/inference`.
+
+If `classifier_checkpoint` is not set, the probe is instead read from the default location below, which is where training writes it:
 ```
 [folder]/[eval_name]/[tag]/latest.pt
 ```
-Then run inference, locally or distributed, using the same evaluation commands as above, but with configs from `configs/inference`.
 
 ### Pretraining
 

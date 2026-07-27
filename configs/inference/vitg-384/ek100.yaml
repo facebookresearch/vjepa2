@@ -6,6 +6,7 @@ eval_name: action_anticipation_frozen
 folder: /your_folder/evals/vitg-384/ek100
 resume_checkpoint: true
 val_only: true
+classifier_checkpoint: /your_vjepa2_checkpoints/evals/ek100-vitg-384.pt
 experiment:
   classifier:
     num_probe_blocks: 4
