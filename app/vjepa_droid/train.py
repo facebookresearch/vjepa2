@@ -17,7 +17,6 @@ try:
 except Exception:
     pass
 
-import copy
 import gc
 import random
 import time
@@ -144,7 +143,6 @@ def main(args, resume_preempt=False):
     start_lr = cfgs_opt.get("start_lr")
     lr = cfgs_opt.get("lr")
     final_lr = cfgs_opt.get("final_lr")
-    enc_lr_scale = cfgs_opt.get("enc_lr_scale", 1.0)
     betas = cfgs_opt.get("betas", (0.9, 0.999))
     eps = cfgs_opt.get("eps", 1.0e-8)
     # ----------------------------------------------------------------------- #
@@ -189,7 +187,7 @@ def main(args, resume_preempt=False):
     )
 
     # -- init model
-    encoder, predictor = init_video_model(
+    target_encoder, predictor = init_video_model(
         uniform_power=uniform_power,
         device=device,
         patch_size=patch_size,
@@ -210,12 +208,9 @@ def main(args, resume_preempt=False):
         use_rope=use_rope,
         use_activation_checkpointing=use_activation_checkpointing,
     )
-    target_encoder = copy.deepcopy(encoder)
-
     if compile_model:
-        logger.info("Compiling encoder, target_encoder, and predictor.")
+        logger.info("Compiling target_encoder and predictor.")
         torch._dynamo.config.optimize_ddp = False
-        encoder.compile()
         target_encoder.compile()
         predictor.compile()
 
@@ -255,14 +250,12 @@ def main(args, resume_preempt=False):
 
     # -- init optimizer and scheduler
     optimizer, scaler, scheduler, wd_scheduler = init_opt(
-        encoder=encoder,
         predictor=predictor,
         wd=wd,
         final_wd=final_wd,
         start_lr=start_lr,
         ref_lr=lr,
         final_lr=final_lr,
-        enc_lr_scale=enc_lr_scale,
         iterations_per_epoch=ipe,
         anneal=anneal,
         warmup=warmup,
@@ -271,16 +264,15 @@ def main(args, resume_preempt=False):
         betas=betas,
         eps=eps,
     )
-    encoder = DistributedDataParallel(encoder, static_graph=True)
     predictor = DistributedDataParallel(predictor, static_graph=False, find_unused_parameters=True)
     target_encoder = DistributedDataParallel(target_encoder)
     for p in target_encoder.parameters():
         p.requires_grad = False
 
     # -- looad pretrained weights
-    encoder, predictor, target_encoder = load_pretrained(
+    _, predictor, target_encoder = load_pretrained(
         r_path=p_file,
-        encoder=encoder,
+        encoder=None,
         predictor=predictor,
         context_encoder_key=context_encoder_key,
         target_encoder_key=target_encoder_key,
@@ -293,7 +285,7 @@ def main(args, resume_preempt=False):
     # -- load training checkpoint
     if os.path.exists(latest_path):
         (
-            encoder,
+            _,
             predictor,
             target_encoder,
             optimizer,
@@ -301,7 +293,7 @@ def main(args, resume_preempt=False):
             start_epoch,
         ) = load_checkpoint(
             r_path=resume_path,
-            encoder=encoder,
+            encoder=None,
             predictor=predictor,
             target_encoder=target_encoder,
             opt=optimizer,
@@ -314,12 +306,14 @@ def main(args, resume_preempt=False):
     def save_checkpoint(epoch, path):
         if rank != 0:
             return
+        encoder_state_dict = target_encoder.state_dict()
         save_dict = {
-            "encoder": encoder.state_dict(),
+            # Keep both keys for compatibility with existing V-JEPA 2 tooling.
+            "encoder": encoder_state_dict,
             "predictor": predictor.state_dict(),
             "opt": optimizer.state_dict(),
             "scaler": None if scaler is None else scaler.state_dict(),
-            "target_encoder": target_encoder.state_dict(),
+            "target_encoder": encoder_state_dict,
             "epoch": epoch,
             "loss": loss_meter.avg,
             "batch_size": batch_size,

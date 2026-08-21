@@ -19,6 +19,22 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger()
 
 
+def _migrate_predictor_optimizer_state(optimizer_state, num_param_groups):
+    """Drop the unused encoder groups from pre-fix V-JEPA2-AC checkpoints."""
+    if num_param_groups != 2 or len(optimizer_state["param_groups"]) != 4:
+        return optimizer_state
+
+    predictor_groups = [optimizer_state["param_groups"][1], optimizer_state["param_groups"][3]]
+    predictor_param_ids = {param_id for group in predictor_groups for param_id in group["params"]}
+    return {
+        **optimizer_state,
+        "state": {
+            param_id: state for param_id, state in optimizer_state["state"].items() if param_id in predictor_param_ids
+        },
+        "param_groups": predictor_groups,
+    }
+
+
 def load_pretrained(
     r_path,
     encoder=None,
@@ -34,7 +50,7 @@ def load_pretrained(
 
     epoch = checkpoint["epoch"]
 
-    if load_encoder:
+    if load_encoder and encoder is not None:
         # -- loading encoder
         pretrained_dict = checkpoint[context_encoder_key]
         pretrained_dict = {k.replace("backbone.", ""): v for k, v in pretrained_dict.items()}
@@ -80,12 +96,13 @@ def load_checkpoint(
 
     epoch = checkpoint["epoch"]
 
-    # -- loading encoder
-    pretrained_dict = checkpoint["encoder"]
-    for kw in replace_kw:
-        pretrained_dict = {k.replace(kw, ""): v for k, v in pretrained_dict.items()}
-    msg = encoder.load_state_dict(pretrained_dict, strict=False)
-    logger.info(f"loaded pretrained encoder from epoch {epoch} with msg: {msg}")
+    if encoder is not None:
+        # -- loading encoder
+        pretrained_dict = checkpoint["encoder"]
+        for kw in replace_kw:
+            pretrained_dict = {k.replace(kw, ""): v for k, v in pretrained_dict.items()}
+        msg = encoder.load_state_dict(pretrained_dict, strict=False)
+        logger.info(f"loaded pretrained encoder from epoch {epoch} with msg: {msg}")
 
     # -- loading predictor
     pretrained_dict = checkpoint["predictor"]
@@ -105,7 +122,8 @@ def load_checkpoint(
 
     # -- loading optimizer
     if opt is not None:
-        opt.load_state_dict(checkpoint["opt"])
+        optimizer_state = _migrate_predictor_optimizer_state(checkpoint["opt"], len(opt.param_groups))
+        opt.load_state_dict(optimizer_state)
 
     if scaler is not None:
         scaler.load_state_dict(checkpoint["scaler"])
@@ -195,7 +213,6 @@ def init_video_model(
 
 
 def init_opt(
-    encoder,
     predictor,
     iterations_per_epoch,
     start_lr,
@@ -210,21 +227,10 @@ def init_opt(
     betas=(0.9, 0.999),
     eps=1e-8,
     zero_init_bias_wd=True,
-    enc_lr_scale=1.0,
 ):
     param_groups = [
         {
-            "params": (p for n, p in encoder.named_parameters() if ("bias" not in n) and (len(p.shape) != 1)),
-            "lr_scale": enc_lr_scale,
-        },
-        {
             "params": (p for n, p in predictor.named_parameters() if ("bias" not in n) and (len(p.shape) != 1)),
-        },
-        {
-            "params": (p for n, p in encoder.named_parameters() if ("bias" in n) or (len(p.shape) == 1)),
-            "WD_exclude": zero_init_bias_wd,
-            "weight_decay": 0,
-            "lr_scale": enc_lr_scale,
         },
         {
             "params": (p for n, p in predictor.named_parameters() if ("bias" in n) or (len(p.shape) == 1)),
