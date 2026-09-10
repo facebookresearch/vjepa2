@@ -4,12 +4,14 @@
 # LICENSE file in the root directory of this source tree.
 
 import unittest
+from unittest import mock
 
 import numpy as np
 import torch
 
 from app.vjepa import transforms
 from src.datasets.utils.video import functional
+from src.datasets.utils.video import transforms as video_transforms
 from src.datasets.utils.video.volume_transforms import ClipToTensor
 
 
@@ -49,6 +51,18 @@ class TestVideoTransformFunctionalCrop(unittest.TestCase):
 
         for clip_tensor, clip_np in zip(cropped_tensor, cropped_np_array):
             torch.testing.assert_close(clip_tensor, torch.Tensor(clip_np).to(dtype=torch.uint8))
+
+
+class TestVideoTransformRandomCrop(unittest.TestCase):
+    def test_includes_last_valid_crop_position(self):
+        images = torch.arange(24).reshape(1, 1, 4, 6)
+
+        with mock.patch.object(video_transforms.np.random, "randint", side_effect=[2, 4]) as mock_randint:
+            cropped, cropped_boxes = video_transforms.random_crop(images, size=2)
+
+        self.assertEqual(mock_randint.call_args_list, [mock.call(0, 3), mock.call(0, 5)])
+        torch.testing.assert_close(cropped, images[:, :, 2:4, 4:6])
+        self.assertIsNone(cropped_boxes)
 
 
 class TestVideoTransformFunctionalResize(unittest.TestCase):
