@@ -135,10 +135,10 @@ def random_crop(images, size, boxes=None):
     width = images.shape[3]
     y_offset = 0
     if height > size:
-        y_offset = int(np.random.randint(0, height - size))
+        y_offset = int(np.random.randint(0, height - size + 1))
     x_offset = 0
     if width > size:
-        x_offset = int(np.random.randint(0, width - size))
+        x_offset = int(np.random.randint(0, width - size + 1))
     cropped = images[:, :, y_offset : y_offset + size, x_offset : x_offset + size]
 
     cropped_boxes = crop_boxes(boxes, x_offset, y_offset) if boxes is not None else None
