@@ -18,6 +18,8 @@ import torch.utils.data
 from decord import VideoReader, cpu
 from scipy.spatial.transform import Rotation
 
+from app.vjepa_droid.temporal import ClockAlignmentError, load_physical_clock
+
 _GLOBAL_SEED = 0
 logger = getLogger()
 
@@ -40,6 +42,10 @@ def init_data(
     transform=None,
     camera_frame=False,
     tubelet_size=2,
+    temporal_sampling="legacy",
+    timestamp_alignment="sidecar",
+    timestamp_tolerance_s=0.05,
+    max_observation_gap_s=0.25,
 ):
     dataset = DROIDVideoDataset(
         data_path=data_path,
@@ -49,6 +55,10 @@ def init_data(
         camera_views=camera_views,
         frameskip=tubelet_size,
         camera_frame=camera_frame,
+        temporal_sampling=temporal_sampling,
+        timestamp_alignment=timestamp_alignment,
+        timestamp_tolerance_s=timestamp_tolerance_s,
+        max_observation_gap_s=max_observation_gap_s,
     )
 
     dist_sampler = torch.utils.data.distributed.DistributedSampler(
@@ -96,6 +106,10 @@ class DROIDVideoDataset(torch.utils.data.Dataset):
         fps=5,
         transform=None,
         camera_frame=False,
+        temporal_sampling="legacy",
+        timestamp_alignment="sidecar",
+        timestamp_tolerance_s=0.05,
+        max_observation_gap_s=0.25,
     ):
         self.data_path = data_path
         self.frames_per_clip = frames_per_clip
@@ -103,6 +117,27 @@ class DROIDVideoDataset(torch.utils.data.Dataset):
         self.fps = fps
         self.transform = transform
         self.camera_frame = camera_frame
+        if temporal_sampling not in ("legacy", "physical"):
+            raise ValueError("temporal_sampling must be 'legacy' or 'physical'")
+        if temporal_sampling == "physical" and frameskip != 1:
+            raise ValueError("Physical sampling requires frameskip=1 so every image has an aligned state")
+        if temporal_sampling == "physical" and (fps is None or not np.isfinite(fps) or fps <= 0):
+            raise ValueError("Physical sampling requires a finite positive fps")
+        if temporal_sampling == "physical":
+            if timestamp_alignment not in ("sidecar", "row"):
+                raise ValueError("timestamp_alignment must be 'sidecar' or 'row'")
+            if not np.isfinite(timestamp_tolerance_s) or timestamp_tolerance_s < 0:
+                raise ValueError("timestamp_tolerance_s must be finite and nonnegative")
+            if not np.isfinite(max_observation_gap_s) or max_observation_gap_s <= 0:
+                raise ValueError("max_observation_gap_s must be finite and positive")
+        else:
+            logger.warning("Legacy DROID sampling uses MP4 playback time; fps is not a physical acquisition rate")
+        self.temporal_sampling = temporal_sampling
+        self.timestamp_alignment = timestamp_alignment
+        self.timestamp_tolerance_s = timestamp_tolerance_s
+        self.max_observation_gap_s = max_observation_gap_s
+        if temporal_sampling == "physical" and timestamp_alignment == "row":
+            logger.warning("DROID row alignment is a caller assertion; counts do not verify frame-to-row identity")
         if VideoReader is None:
             raise ImportError('Unable to import "decord" which is required to read videos.')
 
@@ -120,19 +155,18 @@ class DROIDVideoDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         path = self.samples[index]
 
-        # -- keep trying to load videos until you find a valid sample
-        loaded_video = False
-        while not loaded_video:
+        # Bound corrupt/too-short video retries; clock errors require fixing the input.
+        for attempt in range(10):
             try:
-                buffer, actions, states, extrinsics, indices = self.loadvideo_decord(path)
-                loaded_video = True
+                return self.loadvideo_decord(path)
+            except ClockAlignmentError:
+                raise
             except Exception as e:
                 logger.info(f"Encountered exception when loading video {path=} {e=}")
-                loaded_video = False
+                if attempt == 9:
+                    raise RuntimeError("Unable to load a DROID clip after 10 attempts") from e
                 index = np.random.randint(self.__len__())
                 path = self.samples[index]
-
-        return buffer, actions, states, extrinsics, indices
 
     def poses_to_diffs(self, poses):
         xyz = poses[:, :3]  # shape [T, 3]
@@ -183,40 +217,53 @@ class DROIDVideoDataset(torch.utils.data.Dataset):
 
         # -- load trajectory info
         tpath = os.path.join(path, self.h5_name)
-        trajectory = h5py.File(tpath)
 
         # -- randomly sample a camera view
         camera_view = self.camera_views[torch.randint(0, len(self.camera_views), (1,))]
         mp4_name = metadata[camera_view].split("recordings/MP4/")[-1]
         camera_name = mp4_name.split(".")[0]
-        extrinsics = trajectory["observation"]["camera_extrinsics"][f"{camera_name}_left"]
-        states = np.concatenate(
-            [
-                np.array(trajectory["observation"]["robot_state"]["cartesian_position"]),
-                np.array(trajectory["observation"]["robot_state"]["gripper_position"])[:, None],
-            ],
-            axis=1,
-        )  # [T, 7]
+        with h5py.File(tpath, "r") as trajectory:
+            extrinsics = np.asarray(trajectory["observation"]["camera_extrinsics"][f"{camera_name}_left"])
+            states = np.column_stack(
+                [
+                    trajectory["observation"]["robot_state"]["cartesian_position"],
+                    trajectory["observation"]["robot_state"]["gripper_position"],
+                ]
+            )  # [T, 7]
         vpath = os.path.join(path, "recordings/MP4", mp4_name)
         vr = VideoReader(vpath, num_threads=-1, ctx=cpu(0))
         # --
-        vfps = vr.get_avg_fps()
-        fpc = self.frames_per_clip
-        fps = self.fps if self.fps is not None else vfps
-        fstp = ceil(vfps / fps)
-        nframes = int(fpc * fstp)
         vlen = len(vr)
-
-        if vlen < nframes:
-            raise Exception(f"Video is too short {vpath=}, {nframes=}, {vlen=}")
-
-        # sample a random window of nframes
-        ef = np.random.randint(nframes, vlen)
-        sf = ef - nframes
-        indices = np.arange(sf, sf + nframes, fstp).astype(np.int64)
-        # --
-        states = states[indices, :][:: self.frameskip]
-        extrinsics = extrinsics[indices, :][:: self.frameskip]
+        if self.temporal_sampling == "physical":
+            sampler, frame_rows = load_physical_clock(
+                tpath,
+                vpath,
+                camera_name,
+                vlen,
+                self.frames_per_clip,
+                self.fps,
+                self.timestamp_alignment,
+                self.timestamp_tolerance_s,
+                self.max_observation_gap_s,
+            )
+            indices = sampler.sample()
+            state_indices = frame_rows[indices]
+            if len(extrinsics) != len(states):
+                raise ClockAlignmentError("Extrinsics and robot states must have the same row count")
+        else:
+            # Explicit compatibility mode: retain playback-clock semantics and RNG support.
+            vfps = vr.get_avg_fps()
+            fpc = self.frames_per_clip
+            fps = self.fps if self.fps is not None else vfps
+            fstp = ceil(vfps / fps)
+            nframes = int(fpc * fstp)
+            if vlen < nframes:
+                raise ValueError(f"Video is too short {vpath=}, {nframes=}, {vlen=}")
+            sf = np.random.randint(vlen - nframes) if vlen > nframes else 0
+            indices = np.arange(sf, sf + nframes, fstp).astype(np.int64)
+            state_indices = indices
+        states = states[state_indices, :][:: self.frameskip]
+        extrinsics = extrinsics[state_indices, :][:: self.frameskip]
         if self.camera_frame:
             states = self.transform_frame(states, extrinsics)
         actions = self.poses_to_diffs(states)

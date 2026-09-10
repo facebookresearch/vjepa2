@@ -231,12 +231,16 @@ def main(args, resume_preempt=False):
     )
 
     # -- init data-loaders/samplers
-    (unsupervised_loader, unsupervised_sampler) = init_data(
+    unsupervised_loader, unsupervised_sampler = init_data(
         data_path=dataset_path,
         batch_size=batch_size,
         frames_per_clip=max_num_frames,
         tubelet_size=1,
         fps=fps,
+        temporal_sampling=cfgs_data.get("temporal_sampling", "legacy"),
+        timestamp_alignment=cfgs_data.get("timestamp_alignment", "sidecar"),
+        timestamp_tolerance_s=cfgs_data.get("timestamp_tolerance_s", 0.05),
+        max_observation_gap_s=cfgs_data.get("max_observation_gap_s", 0.25),
         camera_views=camera_views,
         camera_frame=camera_frame,
         stereo_view=stereo_view,
@@ -427,7 +431,7 @@ def main(args, resume_preempt=False):
                     z_tf = _step_predictor(_z, _a, _s, _e)
 
                     # -- full auto-regressive rollouts of predictor
-                    _z = torch.cat([z[:, : tokens_per_frame], z_tf[:, : tokens_per_frame]], dim=1)
+                    _z = torch.cat([z[:, :tokens_per_frame], z_tf[:, :tokens_per_frame]], dim=1)
                     for n in range(1, auto_steps):
                         _a, _s, _e = actions[:, : n + 1], states[:, : n + 1], extrinsics[:, : n + 1]
                         _z_nxt = _step_predictor(_z, _a, _s, _e)[:, -tokens_per_frame:]

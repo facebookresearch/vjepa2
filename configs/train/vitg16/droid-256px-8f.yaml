@@ -16,6 +16,13 @@ data:
   dataset_fpcs:
   - 8
   fps: 4
+  # Raw-DROID MP4 playback FPS is not the physical acquisition clock.
+  temporal_sampling: physical
+  # Requires native <camera>_timestamps.json beside each MP4.
+  # 'row' is allowed only for an independently established frame-i -> row-i export.
+  timestamp_alignment: sidecar
+  timestamp_tolerance_s: 0.05
+  max_observation_gap_s: 0.25
   num_workers: 12
   patch_size: 16
   pin_mem: true
