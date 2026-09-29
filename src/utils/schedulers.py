@@ -27,7 +27,7 @@ class WSDSchedule(object):
             new_lr = self.ref_lr
         else:
             _step = self._step - (self.T_max + self.warmup_steps)
-            progress = float(_step) / float(max(1, self.anneal_steps))
+            progress = min(1.0, float(_step) / float(max(1, self.anneal_steps)))
             new_lr = self.ref_lr + progress * (self.final_lr - self.ref_lr)
 
         for group in self.optimizer.param_groups:
@@ -104,7 +104,7 @@ class LinearDecaySchedule(object):
 
     def step(self):
         self._step += 1
-        progress = float(self._step) / float(max(1, self.T_max))
+        progress = min(1.0, float(self._step) / float(max(1, self.T_max)))
         new_lr = self.ref_lr + progress * (self.final_lr - self.ref_lr)
         for group in self.optimizer.param_groups:
             group["lr"] = new_lr
