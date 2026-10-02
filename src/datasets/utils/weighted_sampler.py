@@ -150,6 +150,13 @@ class MemoryEfficientDistributedWeightedSampler(DistributedSampler):
 
             self.drawn_samples = 0
 
+    def set_epoch(self, epoch: int) -> None:
+        super().set_epoch(epoch)
+        if self.shuffle:
+            self.rng = np.random.default_rng(self.seed + self.rank + self.epoch)
+        else:
+            self.drawn_samples = 0
+
     def __iter__(self) -> Iterator:
         return self
 
@@ -299,6 +306,18 @@ class MemoryEfficientDistributedWeightedSamplerLessRepeat(DistributedSampler):
 
             self.drawn_samples = 0
 
+    def set_epoch(self, epoch: int) -> None:
+        super().set_epoch(epoch)
+        if self.shuffle:
+            self.rng = np.random.default_rng(self.seed + self.rank + self.epoch)
+            self._generator.manual_seed(self.seed + self.epoch)
+            self.individual_dataset_sampler = [
+                self._new_sampler(size // self.num_replicas)
+                for size in self.dataset_sizes
+            ]
+        else:
+            self.drawn_samples = 0
+
     def __iter__(self) -> Iterator:
         return self
 
@@ -364,3 +383,4 @@ class MemoryEfficientDistributedWeightedSamplerLessRepeat(DistributedSampler):
         sample_idx += sample_idx_in_dataset
 
         return sample_idx
+
