@@ -218,8 +218,8 @@ class _MaskGenerator(object):
                     mask_e *= self._sample_block_mask(p_size)
                 mask_e = mask_e.flatten()
 
-                mask_p = torch.argwhere(mask_e == 0).squeeze()
-                mask_e = torch.nonzero(mask_e).squeeze()
+                mask_p = torch.argwhere(mask_e == 0).flatten()
+                mask_e = torch.nonzero(mask_e).flatten()
 
                 empty_context = len(mask_e) == 0
                 if not empty_context:
@@ -267,3 +267,4 @@ class _MaskGenerator(object):
             return collated_masks_pred, collated_masks_enc  # predict context from block
         else:
             return collated_masks_enc, collated_masks_pred
+
