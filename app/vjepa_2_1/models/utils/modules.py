@@ -283,6 +283,11 @@ class RoPEAttention(nn.Module):
             k = torch.cat([kd, kh, kw], dim=-1)
 
         if self.use_sdpa:
+            # PyTorch 2.0 SDPA uses a fixed 1/sqrt(head_dim) scale.
+            # Rescale queries only for a custom temperature; keep the default path unchanged.
+            q_scale = self.scale / (q.size(-1) ** -0.5)
+            if q_scale != 1.0:
+                q = q * q_scale
             with torch.backends.cuda.sdp_kernel():
                 x = F.scaled_dot_product_attention(
                     q, k, v, dropout_p=self.proj_drop_prob, is_causal=self.is_causal
@@ -336,6 +341,11 @@ class Attention(nn.Module):
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         if self.use_sdpa:
+            # PyTorch 2.0 SDPA uses a fixed 1/sqrt(head_dim) scale.
+            # Rescale queries only for a custom temperature; keep the default path unchanged.
+            q_scale = self.scale / (q.size(-1) ** -0.5)
+            if q_scale != 1.0:
+                q = q * q_scale
             with torch.backends.cuda.sdp_kernel():
                 x = F.scaled_dot_product_attention(
                     q, k, v, dropout_p=self.proj_drop_prob, is_causal=self.is_causal
