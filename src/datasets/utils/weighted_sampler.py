@@ -8,9 +8,9 @@ from typing import Iterator, Optional
 
 import numpy as np
 import torch
+from torch.utils.data import DistributedSampler, RandomSampler
 
 from src.utils.logging import get_logger
-from torch.utils.data import DistributedSampler, RandomSampler
 
 logger = get_logger("WeightedSampler")
 
@@ -35,9 +35,7 @@ class DistributedWeightedSampler(DistributedSampler):
         seed: int = 0,
         drop_last: bool = False,
     ):
-        logger.info(
-            f"Using DistributedWeightedSampler with rank {rank} / {num_replicas}"
-        )
+        logger.info(f"Using DistributedWeightedSampler with rank {rank} / {num_replicas}")
         assert hasattr(
             dataset, "sample_weights"
         ), "Dataset must have sample_weights property for using DistributedWeightedSampler"
@@ -80,9 +78,7 @@ class DistributedWeightedSampler(DistributedSampler):
             if padding_size <= len(indices):
                 indices += indices[:padding_size]
             else:
-                indices += (indices * math.ceil(padding_size / len(indices)))[
-                    :padding_size
-                ]
+                indices += (indices * math.ceil(padding_size / len(indices)))[:padding_size]
         else:
             # remove tail of data to make it evenly divisible
             indices = indices[: self.total_size]
@@ -110,9 +106,7 @@ class MemoryEfficientDistributedWeightedSampler(DistributedSampler):
         shuffle: bool = True,
         seed: int = 0,
     ):
-        logger.info(
-            f"Using MemoryEfficientDistributedWeightedSampler with rank {rank} / {num_replicas}"
-        )
+        logger.info(f"Using MemoryEfficientDistributedWeightedSampler with rank {rank} / {num_replicas}")
         assert hasattr(
             dataset, "dataset_weights"
         ), "Dataset must have dataset_weights property for using MemoryEfficientDistributedWeightedSampler"
@@ -135,20 +129,17 @@ class MemoryEfficientDistributedWeightedSampler(DistributedSampler):
         if self.shuffle:
             self.rng = np.random.default_rng(self.seed + self.rank + self.epoch)
             total_weights = sum(self.dataset_weights)
-            self.dataset_probablities = np.array(
-                [w / total_weights for w in self.dataset_weights]
-            )
+            self.dataset_probablities = np.array([w / total_weights for w in self.dataset_weights])
         else:
             if any([not isinstance(w, int) for w in self.dataset_weights]):
-                raise ValueError(
-                    "Dataset weights must be integers when shuffle is False"
-                )
+                raise ValueError("Dataset weights must be integers when shuffle is False")
 
             self.dataset_orders = []
             for i, w in enumerate(self.dataset_weights):
                 self.dataset_orders.extend([i] * w)
 
             self.drawn_samples = 0
+            self.dataset_drawn_samples = [0] * len(self.dataset_sizes)
 
     def set_epoch(self, epoch: int) -> None:
         super().set_epoch(epoch)
@@ -156,15 +147,14 @@ class MemoryEfficientDistributedWeightedSampler(DistributedSampler):
             self.rng = np.random.default_rng(self.seed + self.rank + self.epoch)
         else:
             self.drawn_samples = 0
+            self.dataset_drawn_samples = [0] * len(self.dataset_sizes)
 
     def __iter__(self) -> Iterator:
         return self
 
     def __next__(self) -> int:
         if self.shuffle:
-            selected_dataset_idx = self.rng.choice(
-                range(len(self.dataset_weights)), p=self.dataset_probablities
-            )
+            selected_dataset_idx = self.rng.choice(range(len(self.dataset_weights)), p=self.dataset_probablities)
 
             # In order to avoid sampling the same example multiple times between the ranks,
             # we limit each rank to a subset of the total number of samples in the dataset.
@@ -190,14 +180,13 @@ class MemoryEfficientDistributedWeightedSampler(DistributedSampler):
 
         else:
             # Iterate through the dataset orders in a round-robin fashion, offset by the rank
-            dataset_orders_idx = (self.rank + self.drawn_samples) % len(
-                self.dataset_orders
-            )
+            dataset_orders_idx = (self.rank + self.drawn_samples) % len(self.dataset_orders)
             selected_dataset_idx = self.dataset_orders[dataset_orders_idx]
-            # Get the sample index in the selected dataset by skipping with the num_replicas * drawn_samples
+            # Advance each dataset independently of the mixture order.
             sample_idx_in_dataset = (
-                self.drawn_samples * self.num_replicas + self.rank
+                self.dataset_drawn_samples[selected_dataset_idx] * self.num_replicas + self.rank
             ) % self.dataset_sizes[selected_dataset_idx]
+            self.dataset_drawn_samples[selected_dataset_idx] += 1
             self.drawn_samples += 1
 
         # Getting the index of the sample in the whole dataset
@@ -245,9 +234,7 @@ class MemoryEfficientDistributedWeightedSamplerLessRepeat(DistributedSampler):
         shuffle: bool = True,
         seed: int = 0,
     ):
-        logger.info(
-            f"Using MemoryEfficientDistributedWeightedSamplerLessRepeat with rank {rank} / {num_replicas}"
-        )
+        logger.info(f"Using MemoryEfficientDistributedWeightedSamplerLessRepeat with rank {rank} / {num_replicas}")
         assert hasattr(
             dataset, "dataset_weights"
         ), "Dataset must have dataset_weights property for using MemoryEfficientDistributedWeightedSamplerLessRepeat"
@@ -273,15 +260,11 @@ class MemoryEfficientDistributedWeightedSamplerLessRepeat(DistributedSampler):
         if self.shuffle:
             self.rng = np.random.default_rng(self.seed + self.rank + self.epoch)
             total_weights = sum(self.dataset_weights)
-            self.dataset_probablities = np.array(
-                [w / total_weights for w in self.dataset_weights]
-            )
+            self.dataset_probablities = np.array([w / total_weights for w in self.dataset_weights])
 
             # For each dataset we generate a permutation of the indices that will be processed by that rank.
             # This is going to be the subset of indices, selected by the steps sizes of the world size.
-            logger.info(
-                f"Generating dataset indices for rank {self.rank} / {self.num_replicas}"
-            )
+            logger.info(f"Generating dataset indices for rank {self.rank} / {self.num_replicas}")
 
             # Getting a RandomSampler for indices assigned to each dataset.
             self.individual_dataset_sampler = []
@@ -290,21 +273,18 @@ class MemoryEfficientDistributedWeightedSamplerLessRepeat(DistributedSampler):
                 # NOTE: this may effectively drop the last batch,
                 # but given the sample sizes that we use this sampler with, it should not be an issue.
                 num_samples_in_rank = ds // self.num_replicas
-                self.individual_dataset_sampler.append(
-                    self._new_sampler(num_samples_in_rank)
-                )
+                self.individual_dataset_sampler.append(self._new_sampler(num_samples_in_rank))
 
         else:
             if any([not isinstance(w, int) for w in self.dataset_weights]):
-                raise ValueError(
-                    "Dataset weights must be integers when shuffle is False"
-                )
+                raise ValueError("Dataset weights must be integers when shuffle is False")
 
             self.dataset_orders = []
             for i, w in enumerate(self.dataset_weights):
                 self.dataset_orders.extend([i] * w)
 
             self.drawn_samples = 0
+            self.dataset_drawn_samples = [0] * len(self.dataset_sizes)
 
     def set_epoch(self, epoch: int) -> None:
         super().set_epoch(epoch)
@@ -312,11 +292,11 @@ class MemoryEfficientDistributedWeightedSamplerLessRepeat(DistributedSampler):
             self.rng = np.random.default_rng(self.seed + self.rank + self.epoch)
             self._generator.manual_seed(self.seed + self.epoch)
             self.individual_dataset_sampler = [
-                self._new_sampler(size // self.num_replicas)
-                for size in self.dataset_sizes
+                self._new_sampler(size // self.num_replicas) for size in self.dataset_sizes
             ]
         else:
             self.drawn_samples = 0
+            self.dataset_drawn_samples = [0] * len(self.dataset_sizes)
 
     def __iter__(self) -> Iterator:
         return self
@@ -338,9 +318,7 @@ class MemoryEfficientDistributedWeightedSamplerLessRepeat(DistributedSampler):
         if next_sampler_idx is None:
             # We have reached the end of the dataset, we need to reset the sampler.
             num_samples_in_rank = self.dataset_sizes[dataset_idx] // self.num_replicas
-            self.individual_dataset_sampler[dataset_idx] = self._new_sampler(
-                num_samples_in_rank
-            )
+            self.individual_dataset_sampler[dataset_idx] = self._new_sampler(num_samples_in_rank)
             next_sampler_idx = safe_next(self.individual_dataset_sampler[dataset_idx])
             assert next_sampler_idx is not None
 
@@ -348,9 +326,7 @@ class MemoryEfficientDistributedWeightedSamplerLessRepeat(DistributedSampler):
 
     def __next__(self) -> int:
         if self.shuffle:
-            selected_dataset_idx = self.rng.choice(
-                range(len(self.dataset_weights)), p=self.dataset_probablities
-            )
+            selected_dataset_idx = self.rng.choice(range(len(self.dataset_weights)), p=self.dataset_probablities)
             in_rank_sample = self._in_rank_next_index_for_dataset(selected_dataset_idx)
 
             # 2) Getting sample index in the dataset.
@@ -358,14 +334,13 @@ class MemoryEfficientDistributedWeightedSamplerLessRepeat(DistributedSampler):
 
         else:
             # Iterate through the dataset orders in a round-robin fashion, offset by the rank
-            dataset_orders_idx = (self.rank + self.drawn_samples) % len(
-                self.dataset_orders
-            )
+            dataset_orders_idx = (self.rank + self.drawn_samples) % len(self.dataset_orders)
             selected_dataset_idx = self.dataset_orders[dataset_orders_idx]
-            # Get the sample index in the selected dataset by skipping with the num_replicas * drawn_samples
+            # Advance each dataset independently of the mixture order.
             sample_idx_in_dataset = (
-                self.drawn_samples * self.num_replicas + self.rank
+                self.dataset_drawn_samples[selected_dataset_idx] * self.num_replicas + self.rank
             ) % self.dataset_sizes[selected_dataset_idx]
+            self.dataset_drawn_samples[selected_dataset_idx] += 1
             self.drawn_samples += 1
 
         # Getting the index of the sample in the whole dataset
@@ -383,4 +358,3 @@ class MemoryEfficientDistributedWeightedSamplerLessRepeat(DistributedSampler):
         sample_idx += sample_idx_in_dataset
 
         return sample_idx
-
