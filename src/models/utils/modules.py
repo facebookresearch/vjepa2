@@ -248,7 +248,7 @@ class ACRoPEAttention(nn.Module):
         if attn_mask is not None or self.use_sdpa:
             with torch.backends.cuda.sdp_kernel():
                 x = F.scaled_dot_product_attention(
-                    q, k, v, dropout_p=self.proj_drop_prob, is_causal=self.is_causal, attn_mask=attn_mask
+                    q, k, v, dropout_p=self.attn_drop.p, is_causal=self.is_causal, attn_mask=attn_mask
                 )
                 attn = None
         else:
@@ -372,7 +372,7 @@ class RoPEAttention(nn.Module):
         if attn_mask is not None or self.use_sdpa:
             with torch.backends.cuda.sdp_kernel():
                 x = F.scaled_dot_product_attention(
-                    q, k, v, dropout_p=self.proj_drop_prob, is_causal=self.is_causal, attn_mask=attn_mask
+                    q, k, v, dropout_p=self.attn_drop.p, is_causal=self.is_causal, attn_mask=attn_mask
                 )
                 attn = None
         else:
@@ -419,7 +419,7 @@ class Attention(nn.Module):
         if attn_mask is not None or self.use_sdpa:
             with torch.backends.cuda.sdp_kernel():
                 x = F.scaled_dot_product_attention(
-                    q, k, v, dropout_p=self.proj_drop_prob, is_causal=self.is_causal, attn_mask=attn_mask
+                    q, k, v, dropout_p=self.attn_drop.p, is_causal=self.is_causal, attn_mask=attn_mask
                 )
                 attn = None
         else:
