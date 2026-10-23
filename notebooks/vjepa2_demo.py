@@ -88,7 +88,7 @@ def get_vjepa_video_classification_results(classifier, out_patch_features_pt):
 
     print("Top 5 predicted class names:")
     top5_indices = out_classifier.topk(5).indices[0]
-    top5_probs = F.softmax(out_classifier.topk(5).values[0]) * 100.0  # convert to percentage
+    top5_probs = F.softmax(out_classifier.topk(5).values[0], dim=0) * 100.0 # convert to percentage
     for idx, prob in zip(top5_indices, top5_probs):
         str_idx = str(idx.item())
         print(f"{SOMETHING_SOMETHING_V2_CLASSES[str_idx]} ({prob}%)")
