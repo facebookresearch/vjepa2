@@ -1,5 +1,5 @@
 
-🆕 **[2026-03-16]:** :fire: V-JEPA 2.1 is released :fire: A new familly of models trained with a novel recipe that learns high quality and temporolly consistent dense features !!!
+🆕 **[2026-03-16]:** :fire: V-JEPA 2.1 is released :fire: A new family of models trained with a novel recipe that learns high quality and temporally consistent dense features !!!
 
 **[2025-06-25]:** V-JEPA 2 is released. [[`Blog`](https://ai.meta.com/blog/v-jepa-2-world-model-benchmarks)]
 
@@ -36,7 +36,7 @@ Rabbat, Yann LeCun, Nicolas Ballas, Adrien Bardes
 
 [[`Paper`](https://arxiv.org/abs/TODO)] [[`BibTex`](#Citation)]
 
-V-JEPA 2.1 improves the training recipe to focus on learning high-quality and temporally consistent dense features, as higlighted by PCA visualizations:
+V-JEPA 2.1 improves the training recipe to focus on learning high-quality and temporally consistent dense features, as highlighted by PCA visualizations:
 
 <p align="center">
 	<img src="assets/teaser_screenshot_5dice.png" width=100%>
